@@ -2,6 +2,9 @@ import os
 import subprocess
 from database import get_ramais, get_localnets
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_PATH = os.path.join(BASE_DIR, 'micro_pbx.db')
+
 SIP_CONF = "/etc/asterisk/sip.conf"
 
 def gerar_sip_conf():
@@ -36,7 +39,6 @@ def gerar_sip_conf():
 def reload_sip():
     gerar_sip_conf()
     subprocess.run(["asterisk", "-rx", "sip reload"])
-    print("🔄 sip.conf atualizado e SIP recarregado.")
 
 if __name__ == "__main__":
     reload_sip()

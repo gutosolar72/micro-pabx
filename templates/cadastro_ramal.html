@@ -1,110 +1,241 @@
 {% extends "base.html" %}
 
+{% block title %}Gerenciar Ramais{% endblock %}
+
 {% block content %}
-<div class="card" style="display: flex; gap: 20px;">
+<style>
+    .layout-split {
+        display: flex;
+        gap: 30px;
+    }
+
+    /* Coluna da Lista de Ramais (Sidebar) */
+    .sidebar {
+        flex: 0 0 250px; /* Não cresce, não encolhe, base de 250px */
+        border-right: 1px solid #e0e0e0;
+        padding-right: 20px;
+    }
+    .sidebar h3 {
+        margin-top: 0;
+        color: #0056b3;
+    }
+    .ramal-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .ramal-list li {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .ramal-list li:hover {
+        background-color: #f4f8fb;
+    }
+    .ramal-list li.selected {
+        background-color: #e0eafc;
+        font-weight: bold;
+        color: #0056b3;
+    }
+
+    /* Coluna Principal do Formulário */
+    .main-content {
+        flex-grow: 1;
+    }
+    .main-content h2 {
+        margin-top: 0;
+    }
+
+    /* Estilos do Formulário */
+    .form-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+    .form-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .form-group label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #333;
+    }
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    .form-group input:read-only {
+        background-color: #f0f0f0;
+        cursor: not-allowed;
+    }
+
+    /* Botões de Ação */
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    .form-actions button {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .btn-save { background-color: #28a745; color: white; }
+    .btn-save:hover { background-color: #218838; }
+    .btn-new { background-color: #007bff; color: white; }
+    .btn-new:hover { background-color: #0069d9; }
+    .btn-delete { background-color: #dc3545; color: white; margin-left: auto; } /* Joga para a direita */
+    .btn-delete:hover { background-color: #c82333; }
+    .btn-delete:disabled { background-color: #ccc; cursor: not-allowed; }
+    
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+</style>
+
+<div class="card layout-split">
 
     <!-- Sidebar: lista de ramais -->
-    <div style="width: 30%; border-right: 1px solid #ccc; padding-right: 10px;">
-        <h3>Ramais Cadastrados</h3>
+    <aside class="sidebar">
+        <h3>Ramais</h3>
         {% if ramais %}
-            <ul id="lista-ramais" style="list-style: none; padding: 0;">
+            <ul class="ramal-list" id="ramal-list">
                 {% for r in ramais %}
-                    <li style="padding: 5px; cursor: pointer; border-bottom: 1px solid #eee;"
-                        onclick="selecionarRamal('{{ r.ramal }}', '{{ r.nome }}', '{{ r.senha }}', '{{ r.contexto }}')">
-                        {{ r.ramal }} - {{ r.nome }}
+                    <li onclick="selecionarRamal(this, '{{ r.ramal }}', '{{ r.nome }}', '{{ r.senha }}', '{{ r.contexto }}')">
+                        <span>{{ r.ramal }} - {{ r.nome }}</span>
+                        <span>&rsaquo;</span>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
             <p>Nenhum ramal cadastrado.</p>
         {% endif %}
-    </div>
+    </aside>
 
-    <!-- Formulário central -->
-    <div style="flex-grow: 1; padding-left: 10px;">
-        <h2 id="form-title">Cadastro de Ramal</h2>
+    <!-- Formulário principal -->
+    <main class="main-content">
+        <h2 id="form-title">Novo Ramal</h2>
 
-        {% if mensagem %}
-            <p style="color: green;">{{ mensagem }}</p>
-        {% endif %}
-        {% if erro %}
-            <p style="color: red;">{{ erro }}</p>
-        {% endif %}
-
-        <form method="POST" id="form-ramal">
-            <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label for="ramal">Ramal:</label><br>
-                    <input type="number" name="ramal" id="ramal" required style="width: 100%;">
+        <form method="POST" id="form-ramal" action="{{ url_for('pabx.cadastro_ramal') }}">
+            <div class="form-row">
+                <div class="form-group" style="flex-basis: 120px; flex-grow: 0;">
+                    <label for="ramal">Ramal:</label>
+                    <input type="number" name="ramal" id="ramal" value="{{ ramal.ramal }}" required>
                 </div>
-                <div style="flex: 2;">
-                    <label for="nome">Nome do Ramal:</label><br>
-                    <input type="text" name="nome" id="nome" required style="width: 100%;">
+                <div class="form-group">
+                    <label for="nome">Nome / Descrição:</label>
+                    <input type="text" name="nome" id="nome" value="{{ ramal.nome }}" required>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label for="senha">Senha:</label><br>
-                    <input type="text" name="senha" id="senha" required style="width: 100%;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="senha">Senha:</label>
+                    <input type="text" name="senha" id="senha" value="{{ ramal.senha }}" required>
                 </div>
-                <div style="flex: 2;">
-                    <label for="contexto">Contexto:</label><br>
-                    <select id="contexto" name="contexto" style="width: 100%;">
+                <div class="form-group">
+                    <label for="contexto">Contexto:</label>
+                    <select id="contexto" name="contexto">
                         <option value="portaria" {% if ramal.contexto == "portaria" %}selected{% endif %}>Portaria</option>
                         <option value="entrada" {% if ramal.contexto == "entrada" %}selected{% endif %}>Entrada</option>
                     </select>
                 </div>
             </div>
 
-            <div style="margin-top: 10px;">
-                <button type="submit">Salvar Ramal</button>
-                <button type="button" style="margin-left: 10px; background-color: #e0e0e0; color: #000;"
-                        onclick="resetForm()">Reset</button>
-                <button type="button" style="margin-left: 10px; background-color: red; color: white;"
-                        onclick="excluirRamal()">Excluir Ramal</button>
+            <div class="form-actions">
+                <button type="submit" class="btn-save">&#128190; Salvar</button>
+                <button type="button" class="btn-new" onclick="resetForm()">&#43; Novo Ramal</button>
+                <button type="button" class="btn-delete" id="btn-delete" onclick="excluirRamal()" disabled>&#128465; Excluir</button>
             </div>
         </form>
-
-    </div>
+    </main>
 </div>
 
 <script>
-function selecionarRamal(numero, nome, senha, contexto) {
+let currentSelectedLi = null;
+
+function selecionarRamal(element, numero, nome, senha, contexto) {
+    // Atualiza a classe 'selected' na lista
+    if (currentSelectedLi) {
+        currentSelectedLi.classList.remove('selected');
+    }
+    element.classList.add('selected');
+    currentSelectedLi = element;
+
+    // Preenche o formulário
     const ramalInput = document.getElementById("ramal");
     ramalInput.value = numero;
-    ramalInput.readOnly = true; // muda de disabled para readonly
+    ramalInput.readOnly = true; // Bloqueia a edição do número do ramal
+    
     document.getElementById("nome").value = nome;
     document.getElementById("senha").value = senha || "";
     document.getElementById("contexto").value = contexto;
-    document.getElementById("form-title").innerText = "Editar Ramal";
+    
+    // Muda o título e habilita o botão de exclusão
+    document.getElementById("form-title").innerText = "Editar Ramal " + numero;
+    document.getElementById("btn-delete").disabled = false;
+    
 }
 
 function resetForm() {
+    if (currentSelectedLi) {
+        currentSelectedLi.classList.remove('selected');
+        currentSelectedLi = null;
+    }
+    
     document.getElementById("form-ramal").reset();
+    document.getElementById("ramal").value = ""; // Garante que o campo ramal seja limpo
     document.getElementById("ramal").readOnly = false;
-    document.getElementById("form-title").innerText = "Cadastro de Ramal";
+    
+    document.getElementById("form-title").innerText = "Novo Ramal";
+    document.getElementById("btn-delete").disabled = true;
+    
+    document.getElementById("form-ramal").action = "{{ url_for('pabx.cadastro_ramal') }}";
 }
 
 function excluirRamal() {
     const ramal = document.getElementById("ramal").value;
-    if (!ramal) {
-        alert("Selecione um ramal para excluir.");
+    if (!ramal || document.getElementById("ramal").readOnly === false) {
+        alert("Selecione um ramal da lista para excluir.");
         return;
     }
 
-    if (confirm(`Tem certeza que deseja excluir o ramal ${ramal}?`)) {
-        // Cria um formulário temporário para enviar POST
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = "/cadastro/ramal/excluir";
-
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = "ramal";
-        input.value = ramal;
-        form.appendChild(input);
-
+    if (confirm(`Tem certeza que deseja excluir o ramal ${ramal}? Esta ação não pode ser desfeita.`)) {
+        // Cria um formulário dinâmico para enviar a requisição de exclusão via POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ url_for('pabx.excluir_ramal') }}";
+        
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'ramal';
+        hiddenInput.value = ramal;
+        form.appendChild(hiddenInput);
+        
         document.body.appendChild(form);
         form.submit();
     }

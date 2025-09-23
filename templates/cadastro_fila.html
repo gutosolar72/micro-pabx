@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    /* ... (todos os outros estilos que já estão aqui) ... */
+
+    /* Adicione este bloco no final dos estilos */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+</style>
 <div class="card" style="display: flex; gap: 20px;">
 
     <!-- Coluna lateral: lista de filas -->

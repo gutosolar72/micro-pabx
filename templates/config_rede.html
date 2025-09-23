@@ -1,70 +1,150 @@
 {% extends "base.html" %}
 
+{% block title %}Configuração de Rede{% endblock %}
+
 {% block content %}
+<style>
+    /* Estilos específicos para o formulário de configuração */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 150px 1fr; /* Coluna para o rótulo e coluna para o campo */
+        gap: 15px; /* Espaço entre as linhas e colunas */
+        align-items: center; /* Alinha verticalmente o rótulo e o campo */
+        margin-bottom: 20px;
+    }
+
+    .form-grid label {
+        font-weight: bold;
+        text-align: right;
+        padding-right: 10px;
+        color: #333;
+    }
+
+    .form-grid input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box; /* Garante que o padding não afete a largura total */
+    }
+
+    .localnet-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr 40px; /* Nome, Rede, Botão de remover */
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .localnet-grid input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    
+    .remove-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 30px;
+        text-align: center;
+    }
+    .remove-btn:hover {
+        background-color: #c82333;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between; /* Alinha botões nas extremidades */
+        margin-top: 25px;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+    }
+
+    .form-actions button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .form-actions .btn-add {
+        background-color: #17a2b8;
+        color: white;
+    }
+    .form-actions .btn-add:hover {
+        background-color: #138496;
+    }
+
+    .form-actions .btn-save {
+        background-color: #28a745;
+        color: white;
+    }
+    .form-actions .btn-save:hover {
+        background-color: #218838;
+    }
+</style>
+
 <div class="card">
     <h2>Configuração de Rede</h2>
+    <p>Ajuste os parâmetros de rede do sistema. As alterações exigem privilégios de administrador.</p>
 
-    <!-- Mensagens de sucesso ou erro -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <p style="color: {% if category == 'success' %}green{% else %}red{% endif %};">
-                    {{ message }}
-                </p>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    <form method="POST" action="{{ url_for('rede.config_rede') }}">
+        
+        <div class="form-grid">
+            <label for="hostname">Hostname:</label>
+            <input type="text" name="hostname" id="hostname" value="{{ network.hostname }}" required>
 
-    <form method="POST" action="{{ url_for('config_rede.config_rede') }}">
-        <label for="hostname">Hostname:</label><br>
-        <input type="text" name="hostname" id="hostname"
-               value="{{ network.hostname if network.hostname is defined else '' }}" required><br><br>
+            <label for="iface">Interface:</label>
+            <input type="text" name="iface" id="iface" value="{{ network.iface or 'eth0' }}" required>
 
-        <label for="iface">Interface:</label><br>
-        <input type="text" name="iface" id="iface"
-               value="{{ network.iface if network.iface is defined else 'eth0' }}" required><br><br>
+            <label for="ip">Endereço IP:</label>
+            <input type="text" name="ip" id="ip" value="{{ network.ip_atual }}" required>
 
-        <label for="ip">IP:</label><br>
-        <input type="text" name="ip" id="ip"
-               value="{{ network.ip_atual if network.ip_atual is defined else '' }}" required><br><br>
+            <label for="netmask">Máscara de Rede:</label>
+            <input type="text" name="netmask" id="netmask" value="{{ network.netmask }}" required>
 
-        <label for="netmask">Máscara de Rede:</label><br>
-        <input type="text" name="netmask" id="netmask"
-               value="{{ network.netmask if network.netmask is defined else '' }}" required><br><br>
+            <label for="gateway">Gateway:</label>
+            <input type="text" name="gateway" id="gateway" value="{{ network.gateway }}" required>
 
-        <label for="gateway">Gateway:</label><br>
-        <input type="text" name="gateway" id="gateway"
-               value="{{ network.gateway if network.gateway is defined else '' }}" required><br><br>
+            <label for="dns">Servidores DNS:</label>
+            <input type="text" name="dns" id="dns" value="{{ network.dns }}" placeholder="Ex: 8.8.8.8, 1.1.1.1" required>
+        </div>
 
-        <label for="dns">DNS:</label><br>
-        <input type="text" name="dns" id="dns"
-               value="{{ network.dns if network.dns is defined else '' }}" required><br><br>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
 
-        <h3>Redes Localnet</h3>
+        <h3>Redes Locais (Localnet)</h3>
+        <p>Defina as redes que o Asterisk considerará como locais para evitar problemas de NAT.</p>
         <div id="localnet-container">
-            {% if localnets %}
-                {% for ln in localnets %}
-                    <div style="margin-bottom:8px;">
-                        <input type="text" name="nome[]" value="{{ ln.nome }}" placeholder="Nome da rede"
-                               style="width:30%; display:inline-block; margin-right:8px;" required/>
-                        <input type="text" name="localnet[]" value="{{ ln.localnet }}" placeholder="Ex: 192.168.0.0/24"
-                               style="width:65%; display:inline-block;" required/>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div style="margin-bottom:8px;">
-                    <input type="text" name="nome[]" placeholder="Nome da rede"
-                           style="width:30%; display:inline-block; margin-right:8px;" required/>
-                    <input type="text" name="localnet[]" placeholder="Ex: 192.168.0.0/24"
-                           style="width:65%; display:inline-block;" required/>
+            {% for ln in localnets %}
+                <div class="localnet-grid">
+                    <input type="text" name="nome[]" value="{{ ln.nome }}" placeholder="Nome da rede (Ex: Escritório)" required/>
+                    <input type="text" name="localnet[]" value="{{ ln.localnet }}" placeholder="Rede/Máscara (Ex: 192.168.1.0/24)" required/>
+                    <button type="button" class="remove-btn" onclick="removeLocalnet(this)">X</button>
+                </div>
+            {% endfor %}
+            
+            {% if not localnets %}
+                 <div class="localnet-grid">
+                    <input type="text" name="nome[]" placeholder="Nome da rede (Ex: Escritório)" required/>
+                    <input type="text" name="localnet[]" placeholder="Rede/Máscara (Ex: 192.168.1.0/24)" required/>
+                    <button type="button" class="remove-btn" onclick="removeLocalnet(this)">X</button>
                 </div>
             {% endif %}
         </div>
 
-        <button type="button" onclick="addLocalnet()">+ Adicionar Rede</button>
-        <br><br>
-
-        <button type="submit">Salvar Configuração</button>
+        <div class="form-actions">
+            <button type="button" class="btn-add" onclick="addLocalnet()">&#43; Adicionar Rede</button>
+            <button type="submit" class="btn-save">Salvar Configuração</button>
+        </div>
     </form>
 </div>
 
@@ -72,14 +152,18 @@
 function addLocalnet() {
     const container = document.getElementById('localnet-container');
     const div = document.createElement('div');
-    div.style = "margin-bottom:8px;";
+    div.className = 'localnet-grid';
     div.innerHTML = `
-        <input type="text" name="nome[]" placeholder="Nome da rede"
-               style="width:30%; display:inline-block; margin-right:8px;" required/>
-        <input type="text" name="localnet[]" placeholder="Ex: 192.168.0.0/24"
-               style="width:65%; display:inline-block;" required/>
+        <input type="text" name="nome[]" placeholder="Nome da rede (Ex: Escritório)" required/>
+        <input type="text" name="localnet[]" placeholder="Rede/Máscara (Ex: 192.168.1.0/24)" required/>
+        <button type="button" class="remove-btn" onclick="removeLocalnet(this)">X</button>
     `;
     container.appendChild(div);
+}
+
+function removeLocalnet(button) {
+    // Remove o elemento pai do botão (a div.localnet-grid)
+    button.parentElement.remove();
 }
 </script>
 {% endblock %}

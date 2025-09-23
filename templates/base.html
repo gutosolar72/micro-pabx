@@ -87,19 +87,19 @@
 <body>
     <header>
         <h1><span>&#181;</span>icro PABX</h1>
-        <form method="POST" action="{{ url_for('reload') }}">
+        <form action="{{ url_for('main.reload') }}" method="POST" style="display: inline;">
             <button type="submit">Aplicar Configurações</button>
         </form>
     </header>
     <nav>
-        <a href="{{ url_for('index') }}">Início</a>
-        <a href="{{ url_for('config_rede') }}">Configuração de Rede</a>
-        <a href="{{ url_for('config_pabx') }}">Configuração PABX</a>
+        <a href="{{ url_for('main.index') }}">Status</a>
+        <a href="{{ url_for('pabx.config_pabx') }}">Configuração</a>      <!-- CORRIGIDO -->
         {% if session.get('user') %}
             <span>Bem-vindo, {{ session.get('user') }}</span>
-            | <a href="{{ url_for('logout') }}">Logout</a>
+        | <a href="{{ url_for('auth.logout') }}">Logout</a>              <!-- CORRIGIDO -->
         {% endif %}
     </nav>
+
     <div class="container">
 	<div class="flash-messages">
   	{% with messages = get_flashed_messages(with_categories=true) %}
@@ -109,7 +109,7 @@
                             {% if category == 'success' %}background-color:#d4edda; color:#155724;
                             {% elif category == 'danger' %}background-color:#f8d7da; color:#721c24;
                             {% endif %}">
-                        {{ message }}
+                        {{ message | safe }}
                     </div>
                 {% endfor %}
             {% endif %}
