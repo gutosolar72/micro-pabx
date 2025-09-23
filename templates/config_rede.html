@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2>Configuração de Rede</h2>
+
+    <!-- Mensagens de sucesso ou erro -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p style="color: {% if category == 'success' %}green{% else %}red{% endif %};">
+                    {{ message }}
+                </p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('config_rede.config_rede') }}">
+        <label for="hostname">Hostname:</label><br>
+        <input type="text" name="hostname" id="hostname"
+               value="{{ network.hostname if network.hostname is defined else '' }}" required><br><br>
+
+        <label for="iface">Interface:</label><br>
+        <input type="text" name="iface" id="iface"
+               value="{{ network.iface if network.iface is defined else 'eth0' }}" required><br><br>
+
+        <label for="ip">IP:</label><br>
+        <input type="text" name="ip" id="ip"
+               value="{{ network.ip_atual if network.ip_atual is defined else '' }}" required><br><br>
+
+        <label for="netmask">Máscara de Rede:</label><br>
+        <input type="text" name="netmask" id="netmask"
+               value="{{ network.netmask if network.netmask is defined else '' }}" required><br><br>
+
+        <label for="gateway">Gateway:</label><br>
+        <input type="text" name="gateway" id="gateway"
+               value="{{ network.gateway if network.gateway is defined else '' }}" required><br><br>
+
+        <label for="dns">DNS:</label><br>
+        <input type="text" name="dns" id="dns"
+               value="{{ network.dns if network.dns is defined else '' }}" required><br><br>
+
+        <h3>Redes Localnet</h3>
+        <div id="localnet-container">
+            {% if localnets %}
+                {% for ln in localnets %}
+                    <div style="margin-bottom:8px;">
+                        <input type="text" name="nome[]" value="{{ ln.nome }}" placeholder="Nome da rede"
+                               style="width:30%; display:inline-block; margin-right:8px;" required/>
+                        <input type="text" name="localnet[]" value="{{ ln.localnet }}" placeholder="Ex: 192.168.0.0/24"
+                               style="width:65%; display:inline-block;" required/>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div style="margin-bottom:8px;">
+                    <input type="text" name="nome[]" placeholder="Nome da rede"
+                           style="width:30%; display:inline-block; margin-right:8px;" required/>
+                    <input type="text" name="localnet[]" placeholder="Ex: 192.168.0.0/24"
+                           style="width:65%; display:inline-block;" required/>
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="button" onclick="addLocalnet()">+ Adicionar Rede</button>
+        <br><br>
+
+        <button type="submit">Salvar Configuração</button>
+    </form>
+</div>
+
+<script>
+function addLocalnet() {
+    const container = document.getElementById('localnet-container');
+    const div = document.createElement('div');
+    div.style = "margin-bottom:8px;";
+    div.innerHTML = `
+        <input type="text" name="nome[]" placeholder="Nome da rede"
+               style="width:30%; display:inline-block; margin-right:8px;" required/>
+        <input type="text" name="localnet[]" placeholder="Ex: 192.168.0.0/24"
+               style="width:65%; display:inline-block;" required/>
+    `;
+    container.appendChild(div);
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card" style="display: flex; gap: 20px;">
+
+    <!-- Coluna lateral: lista de filas -->
+    <div style="width: 200px; border-right: 1px solid #ccc; padding-right: 10px;">
+        <h3>Filas Cadastradas</h3>
+        <ul style="list-style: none; padding-left: 0;">
+            {% for f in filas %}
+                <li style="margin-bottom: 5px;">
+                    <a href="#" onclick="editarFila({{ f.fila }}, '{{ f.nome }}', {{ f.ramais|tojson }})">
+                        {{ f.fila }} - {{ f.nome }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Formulário central -->
+    <div style="flex: 1;">
+        <h2>Cadastro / Edição de Fila</h2>
+
+        {% if mensagem %}
+            <p style="color: green;">{{ mensagem }}</p>
+        {% endif %}
+        {% if erro %}
+            <p style="color: red;">{{ erro }}</p>
+        {% endif %}
+
+        <form method="POST" id="form-fila">
+            <label for="fila">Número da Fila:</label><br>
+            <input type="number" name="fila" id="fila" required><br><br>
+
+            <label for="nome">Nome da Fila:</label><br>
+            <input type="text" name="nome" id="nome" required><br><br>
+
+            <label>Ramais da Fila:</label><br>
+            {% for r in ramais %}
+                <input type="checkbox" name="ramais" value="{{ r.ramal }}" id="ramal-{{ r.ramal }}">
+                {{ r.ramal }} - {{ r.nome }}<br>
+            {% endfor %}
+            <br>
+            <button type="submit">Salvar Fila</button>
+            <button type="button" style="margin-left: 10px; background-color: red; color: white;" onclick="excluirFila()">Excluir Fila</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Função para preencher o formulário ao clicar em uma fila
+function editarFila(filaNum, nomeFila, ramaisAssociados) {
+    document.getElementById('fila').value = filaNum;
+    document.getElementById('nome').value = nomeFila;
+
+    // Desmarca todos os checkboxes
+    document.querySelectorAll('input[name="ramais"]').forEach(cb => cb.checked = false);
+
+    // Marca os ramais associados
+    ramaisAssociados.forEach(r => {
+        const cb = document.getElementById('ramal-' + r);
+        if (cb) cb.checked = true;
+    });
+}
+
+// Função para excluir fila com confirmação
+function excluirFila() {
+    const fila = document.getElementById("fila").value;
+    if (!fila) {
+        alert("Selecione uma fila para excluir.");
+        return;
+    }
+
+    if (confirm(`Tem certeza que deseja excluir a fila ${fila}?`)) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/cadastro/fila/excluir";
+
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "fila";
+        input.value = fila;
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}
+

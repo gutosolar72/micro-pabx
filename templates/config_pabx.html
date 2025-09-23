@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card" style="display: flex; gap: 20px; flex-wrap: wrap;">
+
+    <!-- Coluna Esquerda: Ramais -->
+    <div style="flex: 1; min-width: 300px;">
+        <h2>Ramais</h2>
+
+        <nav style="margin-bottom: 10px;">
+            <a href="{{ url_for('cadastro_ramal') }}">Cadastrar Ramal</a>
+        </nav>
+
+        <h3>Ramais Cadastrados</h3>
+        {% if ramais %}
+        <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="width: 80px; text-align: center;">Número</th>
+                    <th style="width: 200px; text-align: left;">Nome</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in ramais %}
+                <tr>
+                    <td style="text-align: center;">{{ r.ramal }}</td>
+                    <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.nome }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Nenhum ramal cadastrado.</p>
+        {% endif %}
+    </div>
+
+    <!-- Coluna Direita: Filas -->
+    <div style="flex: 1; min-width: 300px;">
+        <h2>Filas</h2>
+
+        <nav style="margin-bottom: 10px;">
+            <a href="{{ url_for('cadastro_fila') }}">Cadastrar Fila</a>
+        </nav>
+
+        <h3>Filas Cadastradas</h3>
+        {% if filas %}
+        <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="width: 80px; text-align: center;">Número</th>
+                    <th style="width: 200px; text-align: left;">Nome</th>
+                    <th>Ramais Associados</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td style="text-align: center;">{{ f.fila }}</td>
+                    <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ f.nome }}</td>
+                    <td style="overflow-wrap: break-word;">{{ f.ramais | join(", ") }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Nenhuma fila cadastrada.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+

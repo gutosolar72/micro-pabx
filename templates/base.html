@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+    <title>Micro PABX</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f8fb;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #0056b3;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between; /* separa título e botão */
+            align-items: center;
+        }
+        header h1 {
+            font-size: 36px;
+            color: white;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        header h1 span {
+            font-weight: bold;
+            color: #ffdd00;
+            font-size: 70px;
+            font-style: italic;
+            line-height: 1;
+            margin-right: 5px;
+            align-items: center;
+        }
+        header form {
+            margin: 0;
+        }
+        header button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        header button:hover {
+            background-color: #218838;
+        }
+        nav {
+            margin: 15px;
+            text-align: center;
+        }
+        nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #0056b3;
+            font-weight: bold;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px auto;
+            max-width: 600px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        footer {
+            background-color: #0056b3;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><span>&#181;</span>icro PABX</h1>
+        <form method="POST" action="{{ url_for('reload') }}">
+            <button type="submit">Aplicar Configurações</button>
+        </form>
+    </header>
+    <nav>
+        <a href="{{ url_for('index') }}">Início</a>
+        <a href="{{ url_for('config_rede') }}">Configuração de Rede</a>
+        <a href="{{ url_for('config_pabx') }}">Configuração PABX</a>
+        {% if session.get('user') %}
+            <span>Bem-vindo, {{ session.get('user') }}</span>
+            | <a href="{{ url_for('logout') }}">Logout</a>
+        {% endif %}
+    </nav>
+    <div class="container">
+	<div class="flash-messages">
+  	{% with messages = get_flashed_messages(with_categories=true) %}
+    	    {% if messages %}
+      	        {% for category, message in messages %}
+                    <div style="padding:10px; margin-bottom:10px; border-radius:5px; 
+                            {% if category == 'success' %}background-color:#d4edda; color:#155724;
+                            {% elif category == 'danger' %}background-color:#f8d7da; color:#721c24;
+                            {% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+          {% endwith %}
+</div>
+
+        {% block content %}{% endblock %}
+    </div>
+    <footer>
+        <p>Micro PABX - Projeto de Gerenciamento</p>
+    </footer>
+</body>
+</html>
+

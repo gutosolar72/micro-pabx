@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2>Informações do Sistema</h2>
+    <ul>
+        <li><strong>Hostname:</strong> {{ info.hostname }}</li>
+        <li><strong>IP:</strong> {{ info.ip_atual }}</li>
+        <li><strong>Netmask:</strong> {{ info.netmask }}</li>
+        <li><strong>Gateway:</strong> {{ info.gateway }}</li>
+        <li><strong>DNS:</strong> {{ info.dns }}</li>
+        <li><strong>Versão Asterisk:</strong> {{ info.versao_asterisk }}</li>
+        <li><strong>Ramais cadastrados:</strong> {{ info.ramais_cadastrados }}</li>
+    </ul>
+</div>
+{% endblock %}
+
