@@ -1,0 +1,2 @@
+# Permite ao usuário pabx iniciar os serviços de tarefa do PABX sem senha.
+pabx ALL=(root) NOPASSWD: /bin/systemctl start pabx-admin@*.service, /usr/sbin/asterisk
