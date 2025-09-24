@@ -4,7 +4,7 @@ from flask import Blueprint, request, render_template, redirect, url_for, flash
 import subprocess
 import os
 import socket
-import json # <--- Adicionado
+import json
 from database import get_localnets, update_localnets
 from auth import login_required
 
@@ -19,38 +19,43 @@ def get_dns_servers():
                 if line.strip().startswith("nameserver"):
                     dns_servers.append(line.split()[1].strip())
     except FileNotFoundError:
-        print("Aviso: /etc/resolv.conf não encontrado.")
+        pass  # Se o arquivo não existir, retorna uma lista vazia
     return ", ".join(dns_servers)
 
 def carrega_config_atual():
     """
-    Carrega as configurações de rede chamando o script mestre com sudo.
+    Carrega as configurações de rede iniciando um serviço systemd que executa
+    o script get_network_info.py como root.
     """
     network_info = {
         "hostname": socket.gethostname(),
-        "iface": "eth0",
-        "ip_atual": "0.0.0.0",
-        "netmask": "0.0.0.0",
-        "gateway": "0.0.0.0",
-        "dns": get_dns_servers() or "8.8.8.8",
+        "iface": "N/A",
+        "ip_atual": "N/A",
+        "netmask": "N/A",
+        "gateway": "N/A",
+        "dns": get_dns_servers() or "Não definido",
     }
-    
-    script_path = "/opt/micro-pbx/system_manager.sh"
     try:
-        result = subprocess.run(
-            ["sudo", script_path, "get_network_info"],
-            check=True,
-            capture_output=True,
-            text=True
+        service_name = "pabx-admin@get_network_info.service"
+        # Inicia o serviço oneshot para obter as informações
+        subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
+        
+        # A saída do script estará no log do sistema (journal). Precisamos lê-la de lá.
+        # O comando busca a última entrada de log para este serviço.
+        log_output = subprocess.check_output(
+            ["journalctl", "-u", service_name, "--since", "10 seconds ago", "-o", "cat"],
+            text=True, stderr=subprocess.DEVNULL
         )
-        # O stdout pode conter echos, então pegamos apenas a linha JSON
-        json_line = [line for line in result.stdout.splitlines() if line.startswith('{')][0]
+        
+        # A saída do journalctl pode conter mais do que apenas o JSON.
+        # Encontramos a última linha que contém o JSON.
+        json_line = [line for line in log_output.splitlines() if line.strip().startswith('{')][-1]
         data_from_script = json.loads(json_line)
         
         network_info.update({k: v for k, v in data_from_script.items() if v is not None})
 
     except Exception as e:
-        flash(f"Não foi possível detectar as configurações de rede. Carregando valores padrão.", "warning")
+        flash(f"Não foi possível detectar as configurações de rede via serviço. Erro: {str(e)}", "warning")
     
     return network_info
 
@@ -59,18 +64,21 @@ def carrega_config_atual():
 def config_rede():
     if request.method == "POST":
         try:
+            # 1. Coleta os dados do formulário
             iface = request.form["iface"]
             ip = request.form["ip"]
             netmask = request.form["netmask"]
             gateway = request.form["gateway"]
             dns = request.form["dns"]
 
-            update_localnets([
-                {"nome": n.strip(), "localnet": r.strip()}
-                for n, r in zip(request.form.getlist("nome[]"), request.form.getlist("localnet[]"))
-                if n.strip() and r.strip()
-            ])
+            # 2. Salva as redes locais no banco de dados
+            nomes = request.form.getlist("nome[]")
+            redes = request.form.getlist("localnet[]")
+            if nomes and redes:
+                redes_para_salvar = [{"nome": n.strip(), "localnet": r.strip()} for n, r in zip(nomes, redes) if n.strip() and r.strip()]
+                update_localnets(redes_para_salvar)
 
+            # 3. Gera o conteúdo para os arquivos de configuração
             interfaces_content = f"""# Arquivo gerado pelo Micro PABX Flask
 auto lo
 iface lo inet loopback
@@ -87,19 +95,29 @@ iface {iface} inet static
             resolv_lines.extend([f"nameserver {ip_dns.strip()}" for ip_dns in dns_list if ip_dns.strip()])
             resolv_content = "\n".join(resolv_lines)
 
-            script_path = "/opt/micro-pbx/system_manager.sh"
-            subprocess.run([
-                "sudo", script_path, "update_network_config",
-                interfaces_content, resolv_content, iface
-            ], check=True)
+            # 4. Escreve os dados em um arquivo temporário para o serviço systemd ler
+            temp_data = json.dumps({
+                "interfaces": interfaces_content,
+                "resolv": resolv_content,
+                "iface": iface
+            })
             
-            flash("Configuração de rede aplicada com sucesso!", "success")
+            tmp_file_path = "/tmp/pabx_net_config.json"
+            with open(tmp_file_path, "w") as f:
+                f.write(temp_data)
+            
+            # 5. Inicia o serviço systemd que lerá o arquivo temporário e aplicará as configs
+            service_name = "pabx-admin@update_network_config.service"
+            subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
+            
+            flash("Tarefa de atualização de rede iniciada com sucesso.", "success")
 
         except Exception as e:
-            flash(f"Erro ao aplicar configuração de rede: {str(e)}", "danger")
+            flash(f"Erro ao iniciar tarefa de atualização de rede: {str(e)}", "danger")
             
         return redirect(url_for("rede.config_rede"))
 
+    # Para requisições GET
     network = carrega_config_atual()
     localnets = get_localnets()
     return render_template("config_rede.html", network=network, localnets=localnets)

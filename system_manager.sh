@@ -1,40 +1,49 @@
 #!/bin/bash
-set -e # Para o script se qualquer comando falhar
+set -e
 
-# Script central para todas as operações que exigem sudo
 cd "$(dirname "$0")"
 PYTHON_EXEC="./venv/bin/python3"
-
-# O primeiro argumento ($1) define a ação a ser tomada
 ACTION=$1
 
 case $ACTION in
     "apply_config")
-        echo "--- Aplicando configurações do PABX ---"
         $PYTHON_EXEC reload_queues.py
         $PYTHON_EXEC reload_sip.py
         asterisk -rx "core reload" > /dev/null 2>&1
-        echo "--- Configurações aplicadas com sucesso! ---"
         ;;
 
     "get_network_info")
-        echo "--- Obtendo informações de rede ---"
         $PYTHON_EXEC get_network_info.py
         ;;
 
     "update_network_config")
-        echo "--- Atualizando configuração de rede ---"
-        # $2 é o conteúdo do 'interfaces', $3 é o 'resolv.conf', $4 é a interface
-        $PYTHON_EXEC update_network_files.py "$2" "$3"
-        /sbin/ifdown "$4" && /sbin/ifup "$4"
-        echo "--- Configuração de rede aplicada! ---"
-        ;;
+        # Lê os dados do arquivo temporário criado pelo Flask
+        TMP_FILE="/tmp/pabx_net_config.json"
+        if [ ! -f "$TMP_FILE" ]; then
+            echo "Erro: Arquivo de configuração temporário não encontrado."
+            exit 1
+        fi
+        
+        # Extrai os dados usando 'jq' (uma ferramenta JSON de linha de comando)
+        # Primeiro, instale o jq se não tiver: sudo apt-get install jq -y
+        INTERFACES_CONTENT=$(jq -r '.interfaces' "$TMP_FILE")
+        RESOLV_CONTENT=$(jq -r '.resolv' "$TMP_FILE")
+        IFACE=$(jq -r '.iface' "$TMP_FILE")
 
+        # Escreve os arquivos de configuração
+        echo "$INTERFACES_CONTENT" > /etc/network/interfaces
+        echo "$RESOLV_CONTENT" > /etc/resolv.conf
+
+        # Aplica as configurações
+        /sbin/ifdown "$IFACE" && /sbin/ifup "$IFACE"
+        
+        # Limpa o arquivo temporário
+        rm "$TMP_FILE"
+        ;;
     *)
         echo "Erro: Ação desconhecida '$ACTION'"
         exit 1
         ;;
 esac
-
 exit 0
 

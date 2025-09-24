@@ -30,19 +30,12 @@ def index():
 @main_bp.route("/reload", methods=["POST"])
 @login_required
 def reload():
-    script_path = os.path.join(os.path.dirname(__file__), 'system_manager.sh')
     try:
-        # Chama o script mestre com a ação 'apply_config'
-        subprocess.run(
-            ["sudo", script_path, "apply_config"], 
-            check=True,
-            capture_output=True # Captura a saída para não poluir o log do Flask
-        )
-        flash("Configurações aplicadas e Asterisk recarregado com sucesso!", "success")
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        flash(f"Erro ao aplicar configurações: {str(e)}", "danger")
+        subprocess.run(["sudo", "systemctl", "start", "pabx-admin@apply_config.service"], check=True)
+        flash("Tarefa de aplicar configurações iniciada com sucesso!", "success")
+    except Exception as e:
+        flash(f"Erro ao iniciar tarefa de reload: {str(e)}", "danger")
     return redirect(url_for("main.index"))
-
 # Registra o blueprint principal
 app.register_blueprint(main_bp)
 
