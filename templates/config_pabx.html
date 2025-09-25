@@ -77,6 +77,13 @@
         color: #888;
         font-style: italic;
     }
+    .action-button.btn-rotas {
+        background-color: #ffc107; /* Um amarelo/dourado para destacar */
+        color: #212529; /* Texto escuro para contraste */
+    }
+    .action-button.btn-rotas:hover {
+        background-color: #e0a800;
+    }
 </style>
 
 <div class="card dashboard-card">
@@ -91,6 +98,10 @@
         <a href="{{ url_for('pabx.cadastro_fila') }}" class="action-button btn-filas">
             <span class="icon">&#9776;</span> <!-- Ícone de lista/menu -->
             <span class="text">Gerenciar Filas</span>
+        </a>
+        <a href="{{ url_for('rotas.gerenciar_rotas') }}" class="action-button btn-rotas">
+            <span class="icon">&#128707;</span> <!-- Ícone de mapa de rotas -->
+            <span class="text">Gerenciar Rotas</span>
         </a>
         <a href="{{ url_for('rede.config_rede') }}" class="action-button btn-rede">
             <span class="icon">&#127760;</span> <!-- Ícone de globo/rede -->

@@ -1,15 +1,27 @@
 #!/bin/bash
 set -e
 
+# Garante que o script rode a partir do seu próprio diretório
 cd "$(dirname "$0")"
 PYTHON_EXEC="./venv/bin/python3"
 ACTION=$1
 
+echo "--- Executando tarefa: $ACTION (rodando como $USER) ---"
+
 case $ACTION in
     "apply_config")
+        echo "[1/4] Gerando plano de discagem (extensions.conf)..."
+        $PYTHON_EXEC reload_extensions.py
+
+        echo "[2/4] Gerando filas (queues.conf)..."
         $PYTHON_EXEC reload_queues.py
+
+        echo "[3/4] Gerando ramais (sip.conf)..."
         $PYTHON_EXEC reload_sip.py
-        asterisk -rx "core reload" > /dev/null 2>&1
+
+        echo "[4/4] Recarregando Asterisk..."
+        # Usamos 'core reload' para aplicar todas as mudanças de uma vez
+        /usr/sbin/asterisk -rx "core reload" > /dev/null 2>&1
         ;;
 
     "get_network_info")
@@ -20,12 +32,12 @@ case $ACTION in
         # Lê os dados do arquivo temporário criado pelo Flask
         TMP_FILE="/tmp/pabx_net_config.json"
         if [ ! -f "$TMP_FILE" ]; then
-            echo "Erro: Arquivo de configuração temporário não encontrado."
+            echo "Erro: Arquivo de configuração temporário não encontrado." >&2
             exit 1
         fi
-        
-        # Extrai os dados usando 'jq' (uma ferramenta JSON de linha de comando)
-        # Primeiro, instale o jq se não tiver: sudo apt-get install jq -y
+
+        # Extrai os dados usando 'jq'
+        # Garanta que o jq esteja instalado: sudo apt-get install jq -y
         INTERFACES_CONTENT=$(jq -r '.interfaces' "$TMP_FILE")
         RESOLV_CONTENT=$(jq -r '.resolv' "$TMP_FILE")
         IFACE=$(jq -r '.iface' "$TMP_FILE")
@@ -35,15 +47,18 @@ case $ACTION in
         echo "$RESOLV_CONTENT" > /etc/resolv.conf
 
         # Aplica as configurações
+        echo "Aplicando configurações de rede para a interface $IFACE..."
         /sbin/ifdown "$IFACE" && /sbin/ifup "$IFACE"
-        
+
         # Limpa o arquivo temporário
         rm "$TMP_FILE"
         ;;
     *)
-        echo "Erro: Ação desconhecida '$ACTION'"
+        echo "Erro: Ação desconhecida '$ACTION'" >&2
         exit 1
         ;;
 esac
+
+echo "--- Tarefa '$ACTION' concluída com sucesso. ---"
 exit 0
 

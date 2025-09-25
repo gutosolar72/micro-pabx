@@ -1,53 +1,51 @@
-# reload_queues.py
-import sqlite3
-import os # <--- ADICIONADO
+# /opt/micro-pbx/reload_queues.py
+
+from database import get_db # Usando a função centralizada
 
 # --- Configurações ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_PATH = os.path.join(BASE_DIR, 'micro_pbx.db') 
-
 QUEUES_CONF_PATH = '/etc/asterisk/queues.conf'
 
 # --- Funções de Acesso ao Banco de Dados ---
 
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_all_filas():
+    """Busca todas as filas (incluindo seus IDs) cadastradas no banco de dados."""
+    db = get_db()
+    filas_raw = db.execute("SELECT id, fila, nome FROM filas").fetchall()
+    db.close()
+    return [dict(row) for row in filas_raw]
 
-def get_all_filas(conn):
-    cursor = conn.cursor()
-    cursor.execute("SELECT fila, nome FROM filas")
-    return cursor.fetchall()
-
-def get_ramais_in_fila(conn, fila_num):
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT num_ramal
-        FROM ramais_filas
-        WHERE num_fila = ?
-    """, (fila_num,))
-    return [str(row['num_ramal']) for row in cursor.fetchall()]
+def get_ramais_in_fila(fila_id):
+    """Busca todos os ramais associados a uma fila específica pelo ID da fila."""
+    db = get_db()
+    # CORREÇÃO: A consulta agora usa a tabela 'ramal_fila' e faz JOIN com 'ramais'
+    cursor = db.execute("""
+        SELECT r.ramal
+        FROM ramais r
+        JOIN ramal_fila rf ON r.id = rf.ramal_id
+        WHERE rf.fila_id = ?
+    """, (fila_id,))
+    ramais = cursor.fetchall()
+    db.close()
+    return [str(row['ramal']) for row in ramais]
 
 # --- Lógica Principal ---
 
 def generate_queues_conf():
-    conn = get_db_connection()
-    if not conn:
-        print("Erro: Não foi possível conectar ao banco de dados.")
-        return
+    """Gera o conteúdo do arquivo queues.conf a partir dos dados do banco."""
+    print("Iniciando a geração do arquivo queues.conf...")
 
     try:
-        filas = get_all_filas(conn)
+        filas = get_all_filas()
         if not filas:
             conf_content = "; Arquivo gerado automaticamente pelo Micro PABX\n; Nenhuma fila configurada.\n"
         else:
             conf_parts = ["; Arquivo gerado automaticamente pelo Micro PABX\n"]
 
             for fila in filas:
-                fila_num = fila['fila']
+                fila_id = fila['id']
                 fila_nome = fila['nome']
 
+                print(f"Processando fila: [{fila_nome}]")
                 conf_parts.append(f"[{fila_nome}]")
                 conf_parts.append("musicclass=default")
                 conf_parts.append("strategy=ringall")
@@ -55,31 +53,33 @@ def generate_queues_conf():
                 conf_parts.append("retry=5")
                 conf_parts.append("maxlen=1")
                 conf_parts.append("joinempty=yes")
-                conf_parts.append(f"context=from-{fila_nome}")
+                conf_parts.append(f"context=from-{fila_nome.lower().replace(' ', '-')}")
                 conf_parts.append("periodic-announce-frequency=30")
                 conf_parts.append("announce-position=yes")
                 conf_parts.append("announce-holdtime=yes")
                 conf_parts.append('queue-thankyou="queue-thankyou"')
 
-                ramais_membros = get_ramais_in_fila(conn, fila_num)
+                # CORREÇÃO: Passando o ID da fila para a função
+                ramais_membros = get_ramais_in_fila(fila_id)
                 if ramais_membros:
+                    print(f"  - Ramais encontrados: {', '.join(ramais_membros)}")
                     for ramal in ramais_membros:
                         conf_parts.append(f"member => SIP/{ramal}")
                 else:
                     print(f"  - Aviso: A fila [{fila_nome}] não possui ramais associados.")
-                
+
                 conf_parts.append("\n")
 
             conf_content = "\n".join(conf_parts)
 
+        # --- Escrita do Arquivo ---
         with open(QUEUES_CONF_PATH, 'w') as f:
             f.write(conf_content)
+        print(f"Sucesso! Arquivo '{QUEUES_CONF_PATH}' foi gerado/atualizado.")
 
     except Exception as e:
         print(f"Ocorreu um erro durante a geração do queues.conf: {e}")
 
-    finally:
-        conn.close()
 
 # --- Ponto de Entrada do Script ---
 if __name__ == "__main__":

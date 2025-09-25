@@ -1,156 +1,104 @@
-from database import get_db_connection
+# /opt/micro-pbx/cadastro.py
+import sqlite3
+from database import get_db
 
-# ---------------------------
-# CRUD de Ramais
-# ---------------------------
+# --- CRUD de Ramais (Já estava ok, mas limpando para consistência) ---
 
 def adicionar_ramal(ramal, nome, senha, contexto):
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT * FROM ramais WHERE ramal = ?", (ramal,))
-    if c.fetchone():
-        # Atualiza ramal existente
-        c.execute("UPDATE ramais SET nome = ?, senha = ?, contexto = ? WHERE ramal = ?", (nome, senha, ramal, contexto))
-        msg = "Ramal atualizado com sucesso!"
-    else:
-        # Cria novo ramal
-        c.execute("INSERT INTO ramais (ramal, nome, senha, contexto) VALUES (?, ?, ?, ?)", (ramal, nome, senha, contexto))
-        msg = "Ramal criado com sucesso!"
-    conn.commit()
-    conn.close()
-    return True, msg
-
-def remover_ramal(ramal):
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT * FROM ramais WHERE ramal = ?", (ramal,))
-    if not c.fetchone():
-        conn.close()
-        return False, "Ramal não encontrado"
-    
-    # Remove associações com filas antes
-    c.execute("DELETE FROM ramais_filas WHERE num_ramal = ?", (ramal,))
-    
-    # Remove ramal
-    c.execute("DELETE FROM ramais WHERE ramal = ?", (ramal,))
-    conn.commit()
-    conn.close()
-    return True, "Ramal excluído com sucesso!"
-
-
-def atualizar_ramal(ramal, nome=None, senha=None, contexto=None):
-    conn = get_db_connection()
+    """Adiciona um novo ramal. Retorna False se já existir."""
     try:
-        if nome:
-            conn.execute("UPDATE ramais SET nome = ? WHERE ramal = ?", (nome, ramal))
-        if senha:
-            conn.execute("UPDATE ramais SET senha = ? WHERE ramal = ?", (senha, ramal))
-        if contexto:
-            conn.execute("UPDATE ramais SET contexto = ? WHERE ramal = ?", (contexto, ramal))
-        conn.commit()
+        db = get_db()
+        db.execute("INSERT INTO ramais (ramal, nome, senha, contexto) VALUES (?, ?, ?, ?)", (ramal, nome, senha, contexto))
+        db.commit()
+        db.close()
+        return True, f"Ramal {ramal} criado com sucesso."
+    except sqlite3.IntegrityError:
+        return False, f"O ramal {ramal} já existe."
+    except Exception as e:
+        return False, str(e)
+
+def atualizar_ramal(ramal_id, nome, senha, contexto):
+    """Atualiza um ramal existente pelo seu ID."""
+    try:
+        db = get_db()
+        db.execute("UPDATE ramais SET nome = ?, senha = ?, contexto = ? WHERE id = ?", (nome, senha, contexto, ramal_id))
+        db.commit()
+        db.close()
         return True, "Ramal atualizado com sucesso."
     except Exception as e:
         return False, str(e)
-    finally:
-        conn.close()
 
-# ---------------------------
-# CRUD de Filas
-# ---------------------------
-
-def adicionar_fila(fila, nome):
-    conn = get_db_connection()
+def remover_ramal(ramal_id): # <--- MUDANÇA AQUI
+    """Remove um ramal e suas associações pelo ID do ramal."""
     try:
-        conn.execute(
-            "INSERT INTO filas (fila, nome) VALUES (?, ?)",
-            (fila, nome)
-        )
-        conn.commit()
-        return True, "Fila adicionada com sucesso."
+        db = get_db()
+        db.execute("DELETE FROM ramal_fila WHERE ramal_id = ?", (ramal_id,))
+        db.execute("DELETE FROM ramais WHERE id = ?", (ramal_id,)) # <--- MUDANÇA AQUI
+        db.commit()
+        db.close()
+        return True, f"Ramal removido com sucesso."
     except Exception as e:
         return False, str(e)
-    finally:
-        conn.close()
 
-def remover_fila(fila):
-    conn = get_db_connection()
-    c = conn.cursor()
+# --- CRUD de Filas (CORREÇÃO PRINCIPAL) ---
 
-    # Verifica se existe
-    c.execute("SELECT * FROM filas WHERE fila = ?", (fila,))
-    if not c.fetchone():
-        conn.close()
-        return False, "Fila não encontrada"
-
-    # Remove associações de ramais
-    c.execute("DELETE FROM ramais_filas WHERE num_fila = ?", (fila,))
-
-    # Remove a fila
-    c.execute("DELETE FROM filas WHERE fila = ?", (fila,))
-    conn.commit()
-    conn.close()
-    return True, "Fila excluída com sucesso!"
-
-
-
-def atualizar_fila(fila, nome=None):
-    conn = get_db_connection()
+def adicionar_fila(fila_num, nome):
+    """Adiciona uma nova fila. Retorna False se já existir."""
     try:
-        if nome:
-            conn.execute("UPDATE filas SET nome = ? WHERE fila = ?", (nome, fila))
-        conn.commit()
+        db = get_db()
+        db.execute("INSERT INTO filas (fila, nome) VALUES (?, ?)", (fila_num, nome))
+        db.commit()
+        db.close()
+        return True, f"Fila {fila_num} adicionada com sucesso."
+    except sqlite3.IntegrityError:
+        return False, f"A fila {fila_num} já existe."
+    except Exception as e:
+        return False, str(e)
+
+def atualizar_fila(fila_id, nome):
+    """Atualiza o nome de uma fila existente pelo seu ID."""
+    try:
+        db = get_db()
+        db.execute("UPDATE filas SET nome = ? WHERE id = ?", (nome, fila_id))
+        db.commit()
+        db.close()
         return True, "Fila atualizada com sucesso."
     except Exception as e:
         return False, str(e)
-    finally:
-        conn.close()
 
-
-def remover_fila(fila):
-    conn = get_db_connection()
+def remover_fila(fila_id):
+    """Remove uma fila e suas associações pelo ID da fila."""
     try:
-        # Remove associações antes
-        conn.execute("DELETE FROM ramais_filas WHERE num_fila = ?", (fila,))
-        # Remove a fila
-        conn.execute("DELETE FROM filas WHERE fila = ?", (fila,))
-        conn.commit()
+        db = get_db()
+        db.execute("DELETE FROM ramal_fila WHERE fila_id = ?", (fila_id,))
+        db.execute("DELETE FROM filas WHERE id = ?", (fila_id,))
+        db.commit()
+        db.close()
         return True, "Fila removida com sucesso."
     except Exception as e:
         return False, str(e)
-    finally:
-        conn.close()
 
+# --- Associações Ramais <-> Filas (CORREÇÃO PRINCIPAL) ---
 
-# ---------------------------
-# Associações Ramais <-> Filas
-# ---------------------------
-
-def associar_ramal_fila(ramal, fila):
-    conn = get_db_connection()
+def desassociar_todos_ramais_da_fila(fila_id):
+    """Remove todas as associações de ramais para uma determinada fila (pelo ID)."""
     try:
-        conn.execute(
-            "INSERT INTO ramais_filas (num_ramal, num_fila) VALUES (?, ?)",
-            (ramal, fila)
-        )
-        conn.commit()
-        return True, "Ramal associado à fila com sucesso."
+        db = get_db()
+        db.execute("DELETE FROM ramal_fila WHERE fila_id = ?", (fila_id,))
+        db.commit()
+        db.close()
+    except Exception as e:
+        print(f"Erro ao desassociar ramais da fila {fila_id}: {e}")
+
+def associar_ramal_fila(ramal_id, fila_id):
+    """Associa um ramal a uma fila usando os IDs de ambos."""
+    try:
+        db = get_db()
+        db.execute("INSERT INTO ramal_fila (ramal_id, fila_id) VALUES (?, ?)", (ramal_id, fila_id))
+        db.commit()
+        db.close()
+        return True, "Ramal associado com sucesso."
+    except sqlite3.IntegrityError:
+        return True, "Associação já existe."
     except Exception as e:
         return False, str(e)
-    finally:
-        conn.close()
-
-
-def desassociar_ramal_fila(ramal, fila):
-    conn = get_db_connection()
-    try:
-        conn.execute(
-            "DELETE FROM ramais_filas WHERE num_ramal = ? AND num_fila = ?",
-            (ramal, fila)
-        )
-        conn.commit()
-        return True, "Ramal desassociado da fila com sucesso."
-    except Exception as e:
-        return False, str(e)
-    finally:
-        conn.close()
-
