@@ -89,10 +89,11 @@ def init_db():
 
 def get_ramais():
     conn = get_db()
-    ramais_raw = conn.execute("SELECT ramal, nome, senha, contexto FROM ramais").fetchall()
+    ramais_raw = conn.execute("SELECT id, ramal, nome, senha, contexto FROM ramais order by ramal").fetchall()
     ramais = []
     for r in ramais_raw:
         ramais.append({
+            "id": r["id"],          # ADICIONADO
             "ramal": r["ramal"],
             "nome": r["nome"],
             "senha": r["senha"],
@@ -103,7 +104,7 @@ def get_ramais():
 
 def get_filas():
     db = get_db()
-    filas_raw = db.execute("SELECT id, fila, nome FROM filas").fetchall()
+    filas_raw = db.execute("SELECT id, fila, nome FROM filas order by fila").fetchall()
     filas = []
     for f in filas_raw:
         ramais_associados = db.execute(

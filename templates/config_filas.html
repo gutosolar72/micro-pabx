@@ -27,18 +27,34 @@
     .btn-delete:disabled { background-color: #ccc; cursor: not-allowed; }
     
     /* CORREÇÃO DO CHECKBOX */
-    .ramais-checkbox-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
+    .ramais-checkbox-list { 
+        max-height: 200px; 
+        overflow-y: auto; 
+        border: 1px solid #ccc; 
+        padding: 10px; 
+        border-radius: 4px; 
+        background-color: #fff;
+    }
     .ramal-checkbox-item {
         display: flex;
         align-items: center;
         gap: 8px;
         padding: 5px 0;
-        cursor: pointer; /* Faz a linha inteira ser clicável */
+        cursor: pointer; /* Cursor de ponteiro para toda a linha */
+        transition: background-color 0.2s;
     }
-    .ramal-checkbox-item input {
+    .ramal-checkbox-item:hover {
+        background-color: #f8f9fa; /* Destaque ao passar o mouse */
+    }
+    .ramal-checkbox-item input[type="checkbox"] {
         width: auto;
         flex-shrink: 0;
-        cursor: pointer; /* Garante que o checkbox tenha o cursor de ponteiro */
+        cursor: pointer; /* Cursor de ponteiro para o checkbox */
+        margin: 0;
+    }
+    .ramal-checkbox-item span {
+        cursor: pointer; /* Cursor de ponteiro para o texto */
+        user-select: none; /* Impede seleção do texto */
     }
 </style>
 

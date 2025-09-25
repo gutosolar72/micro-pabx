@@ -29,7 +29,7 @@ def cadastro_ramal():
             ramal_num = int(request.form["ramal"])
             nome = request.form["nome"]
             senha = request.form["senha"]
-            contexto = request.form["contexto"]
+            contexto = "interno"
 
             if ramal_id:
                 success, msg = atualizar_ramal(ramal_id, nome, senha, contexto)

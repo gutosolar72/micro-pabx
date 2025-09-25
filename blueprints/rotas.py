@@ -31,7 +31,7 @@ def get_all_filas():
 
 @rotas_bp.route("/rotas", methods=["GET", "POST"])
 @login_required
-def gerenciar_rotas():
+def config_rotas():
     if request.method == "POST":
         # A lógica de salvar (adicionar/editar) virá aqui
         try:
@@ -57,6 +57,29 @@ def gerenciar_rotas():
                 flash("Rota atualizada com sucesso!", "success")
             else:
                 # Lógica de Criação
+
+                # 1. Validação: Ramal
+                cursor = db.execute("SELECT id FROM ramais WHERE ramal = ?", (numero_entrada,))
+                if cursor.fetchone():
+                    db.close()
+                    flash(f"Erro: O número {numero_entrada} já está em uso por um ramal.", "danger")
+                    return redirect(url_for("rotas.config_rotas")) # <-- INTERROMPE E REDIRECIONA
+
+                # 2. Validação: Fila
+                cursor = db.execute("SELECT id FROM filas WHERE fila = ?", (numero_entrada,))
+                if cursor.fetchone():
+                    db.close()
+                    flash(f"Erro: O número {numero_entrada} já está em uso por uma fila.", "danger")
+                    return redirect(url_for("rotas.config_rotas")) # <-- INTERROMPE E REDIRECIONA
+
+                # 3. Validação: Outra Rota
+                cursor = db.execute("SELECT id FROM rotas WHERE numero_entrada = ?", (numero_entrada,))
+                if cursor.fetchone():
+                    db.close()
+                    flash(f"Erro: O número de entrada {numero_entrada} já está em uso por outra rota.", "danger")
+                    return redirect(url_for("rotas.config_rotas")) # <-- INTERROMPE E REDIRECIONA
+
+
                 db.execute("""
                     INSERT INTO rotas (nome, numero_entrada, time_condition_enabled, time_start, time_end, days, dest_fila_if_time, dest_fila_else)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -107,5 +130,5 @@ def excluir_rota():
     else:
         flash("Nenhuma rota selecionada para exclusão.", "warning")
         
-    return redirect(url_for("rotas.gerenciar_rotas"))
+    return redirect(url_for("rotas.config_rotas"))
 

@@ -8,6 +8,19 @@ def adicionar_ramal(ramal, nome, senha, contexto):
     """Adiciona um novo ramal. Retorna False se já existir."""
     try:
         db = get_db()
+
+        # 1. Verifica se o NÚMERO do ramal já existe na tabela de ramais
+        cursor = db.execute("SELECT id FROM ramais WHERE ramal = ?", (ramal,))
+        if cursor.fetchone():
+            db.close()
+            return False, f"Erro: Já existe um ramal com o número {ramal}."
+
+        # 2. Verifica se o NÚMERO do ramal conflita com um número de fila existente
+        cursor = db.execute("SELECT id FROM filas WHERE fila = ?", (ramal,))
+        if cursor.fetchone():
+            db.close()
+            return False, f"Erro: O número {ramal} já está em uso por uma fila."
+
         db.execute("INSERT INTO ramais (ramal, nome, senha, contexto) VALUES (?, ?, ?, ?)", (ramal, nome, senha, contexto))
         db.commit()
         db.close()
@@ -46,6 +59,25 @@ def adicionar_fila(fila_num, nome):
     """Adiciona uma nova fila. Retorna False se já existir."""
     try:
         db = get_db()
+
+        # 1. Verifica se o NÚMERO da fila já existe na tabela de filas
+        cursor = db.execute("SELECT id FROM filas WHERE fila = ?", (fila_num,))
+        if cursor.fetchone():
+            db.close()
+            return False, f"Erro: Já existe uma fila com o número {fila_num}."
+
+        # 2. Verifica se o NOME da fila já existe na tabela de filas
+        cursor = db.execute("SELECT id FROM filas WHERE nome = ?", (nome,))
+        if cursor.fetchone():
+            db.close()
+            return False, f"Erro: Já existe uma fila com o nome '{nome}'."
+
+        # 3. Verifica se o NÚMERO da fila conflita com um número de ramal existente
+        cursor = db.execute("SELECT id FROM ramais WHERE ramal = ?", (fila_num,))
+        if cursor.fetchone():
+            db.close()
+            return False, f"Erro: O número {fila_num} já está em uso por um ramal."
+
         db.execute("INSERT INTO filas (fila, nome) VALUES (?, ?)", (fila_num, nome))
         db.commit()
         db.close()
