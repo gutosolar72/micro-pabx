@@ -36,6 +36,7 @@ def gerar_sip_conf():
             f.write(f"[{r['ramal']}]\n")
             f.write("type=friend\n")
             f.write(f"username={r['ramal']}\n")
+            f.write(f"callerid=\"{r['nome']}\" <{r['ramal']}>\n")
             f.write(f"secret={r['senha']}\n")
             f.write("host=dynamic\n")
             f.write(f"context={r['contexto']}\n")

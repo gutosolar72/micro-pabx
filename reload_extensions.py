@@ -34,36 +34,10 @@ def generate_extensions_conf():
     # --- Inicia a construção do dialplan ---
     conf_parts = [
         "; Arquivo gerado automaticamente pelo Micro PABX",
-        "; https://github.com/gutosolar72/micro-pabx\n",
         "[interno] ; Contexto Unificado para todas as chamadas"
     ]
 
-    # --- 1. Lógica Automática: Chamadas para outros Ramais ---
-    if peers:
-        # Cria um padrão que corresponde a qualquer número de ramal
-        # Ex: _[100-102,201]
-        peer_pattern = f"_({'|'.join(peers)})"
-        conf_parts.extend([
-            "\n; --- Regra Automatica: Chamadas para outros Ramais ---",
-            f"exten => {peer_pattern},1,NoOp(### Chamada interna para Ramal ${{EXTEN}} ###)",
-            f"exten => {peer_pattern},n,Dial(SIP/${{EXTEN}},20,Ttr)",
-            f"exten => {peer_pattern},n,Hangup()"
-        ])
-
-    # --- 2. Lógica Automática: Chamadas para Filas ---
-    if queues:
-        # Cria um padrão que corresponde a qualquer número de fila
-        # Ex: _[800-801]
-        queue_pattern = f"_({'|'.join(queues)})"
-        conf_parts.extend([
-            "\n; --- Regra Automatica: Chamadas para Filas ---",
-            f"exten => {queue_pattern},1,NoOp(### Chamada interna para Fila ${{EXTEN}} ###)",
-            # O nome da fila no Asterisk é o seu número
-            f"exten => {queue_pattern},n,Queue(${{EXTEN}})", 
-            f"exten => {queue_pattern},n,Hangup()"
-        ])
-
-    # --- 3. Lógica Customizada: Rotas de Entrada ---
+    # --- 1. Lógica Customizada: Rotas de Entrada ---
     if routes:
         conf_parts.extend([
             "\n; --- Regras Customizadas: Rotas de Entrada ---"
@@ -84,7 +58,7 @@ def generate_extensions_conf():
 
             if route['time_condition_enabled']:
                 time_range = f"{route['time_start']}-{route['time_end']}"
-                days = route['days']
+                days = route['days'].replace(",","|")
                 fila_if_time_id = route['dest_fila_if_time']
                 fila_if_time_num_row = db.execute("SELECT fila FROM filas WHERE id = ?", (fila_if_time_id,)).fetchone()
 
@@ -104,6 +78,31 @@ def generate_extensions_conf():
                     f"exten => {exten},n,Queue({fila_else_num})",
                     f"exten => {exten},n,Hangup()"
                 ])
+
+    # --- 2. Lógica Automática: Chamadas para Filas ---
+    if queues:
+        conf_parts.extend(["\n; --- Regra Automatica: Chamadas para Filas ---",])
+        for queue in queues:
+            conf_parts.extend([
+                f"exten => {queue},1,NoOp(### Chamada interna para Fila ${{EXTEN}} ###)",
+                f"exten => {queue},n,Queue(${{EXTEN}})", 
+                f"exten => {queue},n,Hangup()\n"
+            ])
+
+    # --- 3. Lógica Automática: Chamadas para outros Ramais ---
+    if peers:
+        conf_parts.extend([
+            "\n; --- Regra Automatica: Chamadas para outros Ramais ---",
+            f"exten => _X,1,NoOp(### Chamada interna para Ramal ${{EXTEN}} ###)",
+            f"exten => _X,n,Dial(SIP/${{EXTEN}},20,Ttr)",
+            f"exten => _X,n,Hangup()\n\n"
+
+            f"exten => _X.,1,NoOp(### Chamada interna para Ramal ${{EXTEN}} ###)",
+            f"exten => _X.,n,Dial(SIP/${{EXTEN}},20,Ttr)",
+            f"exten => _X.,n,Hangup()\n"
+        ])
+
+
     
     db.close()
 

@@ -43,17 +43,18 @@ def generate_queues_conf():
 
             for fila in filas:
                 fila_id = fila['id']
+                fila_num = fila['fila']
                 fila_nome = fila['nome']
 
                 print(f"Processando fila: [{fila_nome}]")
-                conf_parts.append(f"[{fila_nome}]")
+                conf_parts.append(f"[{fila_num}]")
                 conf_parts.append("musicclass=default")
                 conf_parts.append("strategy=ringall")
                 conf_parts.append("timeout=20")
                 conf_parts.append("retry=5")
                 conf_parts.append("maxlen=1")
                 conf_parts.append("joinempty=yes")
-                conf_parts.append(f"context=from-{fila_nome.lower().replace(' ', '-')}")
+                conf_parts.append(f"context=interno")
                 conf_parts.append("periodic-announce-frequency=30")
                 conf_parts.append("announce-position=yes")
                 conf_parts.append("announce-holdtime=yes")
