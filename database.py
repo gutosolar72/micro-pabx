@@ -24,7 +24,6 @@ def init_db():
                  )""")
 
     # --- Tabela de Ramais ---
-    # Modificada para usar ID autoincremental, o que é melhor para Foreign Keys.
     c.execute("""CREATE TABLE IF NOT EXISTS ramais (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ramal INTEGER UNIQUE NOT NULL,
@@ -34,7 +33,6 @@ def init_db():
                 )""")
 
     # --- Tabela de Filas ---
-    # Modificada para usar ID autoincremental.
     c.execute("""CREATE TABLE IF NOT EXISTS filas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     fila INTEGER UNIQUE NOT NULL,
@@ -42,7 +40,6 @@ def init_db():
                 )""")
 
     # --- Tabela de Associação Ramais <-> Filas ---
-    # Modificada para usar os novos IDs das tabelas ramais e filas.
     c.execute("""CREATE TABLE IF NOT EXISTS ramal_fila (
                     ramal_id INTEGER NOT NULL,
                     fila_id INTEGER NOT NULL,
@@ -58,19 +55,24 @@ def init_db():
                     localnet TEXT NOT NULL
                )""")
 
-    # --- NOVA Tabela de Rotas de Entrada ---
     c.execute("""CREATE TABLE IF NOT EXISTS rotas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nome TEXT NOT NULL,
                     numero_entrada TEXT UNIQUE NOT NULL,
-                    time_condition_enabled BOOLEAN NOT NULL DEFAULT 0,
-                    time_start TEXT,
-                    time_end TEXT,
-                    days TEXT, -- Armazenado como string separada por vírgulas, ex: "mon,tue,wed"
-                    dest_fila_if_time INTEGER, -- FK para o ID da tabela de filas
                     dest_fila_else INTEGER NOT NULL, -- FK para o ID da tabela de filas
-                    FOREIGN KEY (dest_fila_if_time) REFERENCES filas(id) ON DELETE SET NULL,
                     FOREIGN KEY (dest_fila_else) REFERENCES filas(id) ON DELETE CASCADE
+                )""")
+
+    # --- NOVA Tabela de Time Conditions ---
+    c.execute("""CREATE TABLE IF NOT EXISTS time_conditions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rota_id INTEGER NOT NULL,
+                    time_start TEXT NOT NULL,
+                    time_end TEXT NOT NULL,
+                    days TEXT NOT NULL, -- Armazenado como string separada por vírgulas, ex: "mon,tue,wed"
+                    dest_fila_if_time INTEGER NOT NULL, -- FK para o ID da tabela de filas
+                    FOREIGN KEY (rota_id) REFERENCES rotas(id) ON DELETE CASCADE,
+                    FOREIGN KEY (dest_fila_if_time) REFERENCES filas(id) ON DELETE CASCADE
                 )""")
 
     # --- Verificação e Criação do Usuário Admin ---
@@ -93,7 +95,7 @@ def get_ramais():
     ramais = []
     for r in ramais_raw:
         ramais.append({
-            "id": r["id"],          # ADICIONADO
+            "id": r["id"],
             "ramal": r["ramal"],
             "nome": r["nome"],
             "senha": r["senha"],
@@ -108,7 +110,7 @@ def get_filas():
     filas = []
     for f in filas_raw:
         ramais_associados = db.execute(
-            "SELECT ramal_id FROM ramal_fila WHERE fila_id = ?", (f["id"],) # CORRIGIDO
+            "SELECT ramal_id FROM ramal_fila WHERE fila_id = ?", (f["id"],)
         ).fetchall()
         ramais_id_list = [r["ramal_id"] for r in ramais_associados]
         filas.append({
@@ -116,6 +118,47 @@ def get_filas():
         })
     db.close()
     return filas
+
+# Nova função para buscar time conditions de uma rota
+def get_time_conditions_by_rota_id(rota_id):
+    db = get_db()
+    tcs_raw = db.execute("SELECT id, time_start, time_end, days, dest_fila_if_time FROM time_conditions WHERE rota_id = ? ORDER BY id", (rota_id,)).fetchall()
+    db.close()
+    return [dict(tc) for tc in tcs_raw]
+
+def get_routes(include_time_conditions=False):
+    db = get_db()
+    cursor = db.execute("SELECT id, nome, numero_entrada, dest_fila_else FROM rotas")
+    rotas = []
+    for row in cursor.fetchall():
+        rota = {
+            "id": row[0],
+            "nome": row[1],
+            "numero_entrada": row[2],
+            "dest_fila_else": row[3],
+        }
+
+        if include_time_conditions:
+            tc_cursor = db.execute(
+                """SELECT id, time_start, time_end, days, dest_fila_if_time
+                   FROM time_conditions WHERE rota_id = ?""",
+                (row[0],),
+            )
+            time_conditions = []
+            for tc in tc_cursor.fetchall():
+                time_conditions.append({
+                    "id": tc[0],
+                    "time_start": tc[1],
+                    "time_end": tc[2],
+                    "days": tc[3],
+                    "dest_fila_if_time": tc[4],
+                })
+            rota["time_conditions"] = time_conditions
+
+        rotas.append(rota)
+
+    db.close()
+    return rotas
 
 # -------------------------------
 # Configurações gerais (localnets)
@@ -126,7 +169,6 @@ def get_localnets():
     conn.close()
     return [{"id": r["id"], "localnet": r["localnet"], "nome": r["nome"]} for r in rows]
 
-# database.py
 def update_localnets(localnets):
     """
     Substitui todos os localnets existentes pelos enviados

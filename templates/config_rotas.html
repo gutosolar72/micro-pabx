@@ -1,204 +1,282 @@
 {% extends "base.html" %}
 
-{% block title %}Gerenciar Rotas de Entrada{% endblock %}
+{% block title %}Gerenciar Rotas{% endblock %}
 
 {% block content %}
-<style>
-    /* Estilos (sem alterações) */
-    .layout-split { display: flex; gap: 30px; }
-    .sidebar { flex: 0 0 250px; border-right: 1px solid #e0e0e0; padding-right: 20px; }
-    .sidebar h3 { margin-top: 0; color: #0056b3; }
-    .item-list { list-style: none; padding: 0; margin: 0; max-height: 450px; overflow-y: auto; }
-    .item-list li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background-color 0.2s; display: flex; justify-content: space-between; align-items: center; }
-    .item-list li:hover { background-color: #f4f8fb; }
-    .item-list li.selected { background-color: #e0eafc; font-weight: bold; color: #0056b3; }
-    .main-content { flex-grow: 1; }
-    .main-content h2 { margin-top: 0; }
-    .form-row { display: flex; gap: 20px; margin-bottom: 15px; }
-    .form-group { flex: 1; display: flex; flex-direction: column; }
-    .form-group label { font-weight: bold; margin-bottom: 5px; color: #333; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    .form-actions { display: flex; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
-    .form-actions button { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
-    .btn-save { background-color: #28a745; color: white; }
-    .btn-new { background-color: #007bff; color: white; }
-    .btn-delete { background-color: #dc3545; color: white; margin-left: auto; }
-    .btn-delete:disabled { background-color: #ccc; cursor: not-allowed; }
-    .time-condition-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-    #time-condition-fields { border-left: 3px solid #007bff; padding-left: 20px; margin-left: 5px; display: none; }
-    .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-    .days-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-    .day-label { display: flex; align-items: center; background-color: #f0f0f0; padding: 8px 12px; border-radius: 20px; cursor: pointer; user-select: none; }
-    .day-label input { display: none; }
-    .day-label span { margin-left: 5px; }
-    .day-label input:checked + span { font-weight: 600; color: #0056b3; }
-</style>
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { margin-top: 30px; }
+        .card { 
+            margin-bottom: 20px; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,.05); 
+            max-width: 600px; /* padrão para os cards normais */
+        }
+        .card-header { 
+            background-color: #007bff; 
+            color: white; 
+            border-radius: 8px 8px 0 0; 
+            padding: 15px; 
+        }
+        .card-body { padding: 20px; }
+        .form-label { font-weight: bold; }
+        .time-condition-block { 
+            border: 1px solid #ced4da; 
+            border-radius: 5px; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            background-color: #f1f1f1; 
+            position: relative; 
+        }
+        .time-condition-block .btn-remove-tc { position: absolute; top: 10px; right: 10px; }
+        .day-checkboxes label { margin-right: 10px; }
+        .btn-add-tc { margin-top: 10px; }
+        .main-content {
+            max-width: 960px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .table th, .table td { vertical-align: middle; }
+        .table-responsive { overflow-x: auto; }
 
-<div class="card layout-split">
+        /* Só para a seção de Rotas Cadastradas */
+        .wide-section .card {
+            max-width: 1280px !important;
+            width: 100%;
+            margin: 0 auto 20px auto;
+        }
+        @media (max-width: 1280px) {
+            .wide-section .card { max-width: 100%; padding-left:10px; padding-right:10px; }
+        }
+    </style>
 
-    <!-- Sidebar: lista de rotas -->
-    <aside class="sidebar">
-        <h3>Rotas de Entrada</h3>
-        {% if rotas %}
-            <ul class="item-list" id="route-list">
-                {% for rota in rotas %}
-                    <!-- AQUI ESTÁ A CORREÇÃO PRINCIPAL: Passando cada campo como um argumento separado -->
-                    <li onclick="selectRoute(this, '{{ rota.id }}', '{{ rota.nome }}', '{{ rota.numero_entrada }}', {{ rota.time_condition_enabled | tojson }}, '{{ rota.time_start }}', '{{ rota.time_end }}', '{{ rota.days }}', '{{ rota.dest_fila_if_time }}', '{{ rota.dest_fila_else }}')">
-                        <span>{{ rota.nome }}</span>
-                        <span>&rsaquo;</span>
-                    </li>
+    <div class="container main-content">
+        <h2 class="mb-4 text-center">Cadastro de Rotas</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
                 {% endfor %}
-            </ul>
-        {% else %}
-            <p>Nenhuma rota cadastrada.</p>
-        {% endif %}
-    </aside>
+            {% endif %}
+        {% endwith %}
 
-    <!-- Formulário principal -->
-    <main class="main-content">
-        <h2 id="form-title">Nova Rota</h2>
+        <!-- Formulário Principal da Rota -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">Adicionar/Editar Rota</div>
+            <div class="card-body">
+                <form id="rotaForm" method="POST" action="{{ url_for('rotas.config_rotas') }}">
+                    <input type="hidden" name="id" value="">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome da Rota</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="numero_entrada" class="form-label">Número</label>
+                        <input type="text" class="form-control" id="numero_entrada" name="numero_entrada" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dest_fila_else" class="form-label">Destino Padrão (Fila)</label>
+                        <select class="form-select" id="dest_fila_else" name="dest_fila_else" required>
+                            <option value="">Selecione uma Fila</option>
+                            {% for fila in filas %}
+                                <option value="{{ fila.id }}">{{ fila.nome }} ({{ fila.fila }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <form method="POST" id="route-form" action="{{ url_for('rotas.config_rotas') }}">
-            <input type="hidden" id="route-id" name="id">
+                    <hr>
+                    <h4>Horários de Atendimento (Time Conditions)</h4>
+                    <div id="timeConditionsContainer"></div>
+                    <button type="button" class="btn btn-info btn-sm btn-add-tc"><i class="fas fa-plus"></i> Adicionar Horário</button>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="route-name">Nome da Rota</label>
-                    <input type="text" id="route-name" name="nome" required>
-                </div>
-                <div class="form-group" style="flex-basis: 150px; flex-grow: 0;">
-                    <label for="route-number">Número de Entrada</label>
-                    <input type="text" id="route-number" name="numero_entrada" required>
-                </div>
+                    <hr>
+                    <button type="submit" class="btn btn-primary">Salvar Rota</button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Cancelar</button>
+                </form>
             </div>
+        </div>
 
-            <hr style="margin: 20px 0;">
-
-            <div class="time-condition-toggle">
-                <input type="checkbox" id="time-condition-enabled" name="time_condition_enabled" onchange="toggleTimeCondition()">
-                <label for="time-condition-enabled" style="margin:0; cursor:pointer;"><b>Ativar Condição de Tempo</b></label>
-            </div>
-
-            <div id="time-condition-fields">
-                <div class="time-grid">
-                    <div class="form-group"><label for="time-start">Horário de Início</label><input type="time" id="time-start" name="time_start"></div>
-                    <div class="form-group"><label for="time-end">Horário de Fim</label><input type="time" id="time-end" name="time_end"></div>
-                </div>
-                <div class="form-group">
-                    <label>Dias da Semana</label>
-                    <div class="days-grid">
-                        <label class="day-label"><input type="checkbox" name="days" value="mon"><span>Seg</span></label>
-                        <label class="day-label"><input type="checkbox" name="days" value="tue"><span>Ter</span></label>
-                        <label class="day-label"><input type="checkbox" name="days" value="wed"><span>Qua</span></label>
-                        <label class="day-label"><input type="checkbox" name="days" value="thu"><span>Qui</span></label>
-                        <label class="day-label"><input type="checkbox" name="days" value="fri"><span>Sex</span></label>
-                        <label class="day-label"><input type="checkbox" name="days" value="sat"><span>Sáb</span></label>
-                        <label class="day-label"><input type="checkbox" name="days" value="sun"><span>Dom</span></label>
+        <!-- Lista de Rotas Existentes -->
+        <div class="wide-section">
+            <div class="card">
+                <div class="card-header bg-primary text-white">Rotas Cadastradas</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Número</th>
+                                    <th>Destino Padrão</th>
+                                    <th style="width: 50%;">Time Conditions</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rota in rotas %}
+                                    <tr>
+                                        <td>{{ rota.nome }}</td>
+                                        <td>{{ rota.numero_entrada }}</td>
+                                        <td>
+                                            {% for fila in filas %}
+                                                {% if fila.id == rota.dest_fila_else %}
+                                                    {{ fila.nome }} ({{ fila.fila }})
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% if rota.time_conditions %}
+                                                <ul>
+                                                    {% for tc in rota.time_conditions %}
+                                                        <li>{{ tc.time_start }}-{{ tc.time_end }} ({{ tc.days }}) ->
+                                                            {% for fila in filas %}
+                                                                {% if fila.id == tc.dest_fila_if_time %}
+                                                                    {{ fila.nome }} ({{ fila.fila }})
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                Nenhum
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-warning btn-sm me-2" onclick="editRota(this)"
+                                                    data-id="{{ rota.id }}"
+                                                    data-nome="{{ rota.nome }}"
+                                                    data-numero_entrada="{{ rota.numero_entrada }}"
+                                                    data-dest_fila_else="{{ rota.dest_fila_else }}"
+                                                    data-time_conditions="{{ rota.time_conditions | tojson }}">
+                                                <i class="fas fa-edit"></i> Editar
+                                            </button>
+                                            <form action="{{ url_for('rotas.excluir_rota') }}" method="POST" style="display:inline;">
+                                                <input type="hidden" name="id" value="{{ rota.id }}">
+                                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir esta rota?');">
+                                                    <i class="fas fa-trash"></i> Excluir
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="dest-fila-if-time">Destino (se dentro do horário)</label>
-                    <select id="dest-fila-if-time" name="dest_fila_if_time">
-                        <option value="">-- Nenhuma --</option>
-                        {% for fila in filas %}<option value="{{ fila.id }}">{{ fila.nome }} ({{ fila.fila }})</option>{% endfor %}
-                    </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery e Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const FILAS_DISPONIVEIS = JSON.parse('{{ filas | tojson | safe }}');
+
+        function generateTimeConditionBlock(tc = {}) {
+            const tcId = tc.id || Date.now();
+            const daysArray = tc.days ? tc.days.split(",") : [];
+
+            let filaOptions = FILAS_DISPONIVEIS.map(fila =>
+                `<option value="${fila.id}" ${tc.dest_fila_if_time == fila.id ? "selected" : ""}>${fila.nome} (${fila.fila})</option>`
+            ).join("");
+
+            return `
+                <div class="time-condition-block" data-tc-id="${tcId}">
+                    <button type="button" class="btn btn-danger btn-sm btn-remove-tc"><i class="fas fa-times"></i></button>
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Horário Início</label>
+                            <input type="time" class="form-control" name="time_start[]" value="${tc.time_start || ""}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Horário Fim</label>
+                            <input type="time" class="form-control" name="time_end[]" value="${tc.time_end || ""}" required>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Dias da Semana</label>
+                        <div class="day-checkboxes">
+                            <label><input type="checkbox" class="day-checkbox" value="mon" ${daysArray.includes("mon") ? "checked" : ""}> Seg</label>
+                            <label><input type="checkbox" class="day-checkbox" value="tue" ${daysArray.includes("tue") ? "checked" : ""}> Ter</label>
+                            <label><input type="checkbox" class="day-checkbox" value="wed" ${daysArray.includes("wed") ? "checked" : ""}> Qua</label>
+                            <label><input type="checkbox" class="day-checkbox" value="thu" ${daysArray.includes("thu") ? "checked" : ""}> Qui</label>
+                            <label><input type="checkbox" class="day-checkbox" value="fri" ${daysArray.includes("fri") ? "checked" : ""}> Sex</label>
+                            <label><input type="checkbox" class="day-checkbox" value="sat" ${daysArray.includes("sat") ? "checked" : ""}> Sáb</label>
+                            <label><input type="checkbox" class="day-checkbox" value="sun" ${daysArray.includes("sun") ? "checked" : ""}> Dom</label>
+                            <input type="hidden" class="days-hidden" name="days_hidden[]" value="${tc.days || ""}">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Destino (Fila)</label>
+                        <select class="form-select" name="dest_fila_if_time[]" required>
+                            <option value="">Selecione uma Fila</option>
+                            ${filaOptions}
+                        </select>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <label id="dest-else-label" for="dest-fila-else">Destino Padrão</label>
-                <select id="dest-fila-else" name="dest_fila_else" required>
-                    <option value="">-- Selecione uma Fila --</option>
-                    {% for fila in filas %}<option value="{{ fila.id }}">{{ fila.nome }} ({{ fila.fila }})</option>{% endfor %}
-                </select>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn-save">&#128190; Salvar</button>
-                <button type="button" class="btn-new" onclick="resetForm()">&#43; Nova Rota</button>
-                <button type="button" class="btn-delete" id="btn-delete" onclick="excluirRota()" disabled>&#128465; Excluir</button>
-            </div>
-        </form>
-    </main>
-</div>
-
-<script>
-    let currentSelectedLi = null;
-
-    // A função agora recebe todos os campos como argumentos, igual ao 'selecionarRamal'
-    function selectRoute(element, id, nome, numero_entrada, time_enabled, time_start, time_end, days, dest_if_time, dest_else) {
-        if (currentSelectedLi) {
-            currentSelectedLi.classList.remove('selected');
+            `;
         }
-        element.classList.add('selected');
-        currentSelectedLi = element;
 
-        // Preenche o formulário com os dados recebidos
-        document.getElementById('route-id').value = id;
-        document.getElementById('route-name').value = nome;
-        document.getElementById('route-number').value = numero_entrada;
-        document.getElementById('dest-fila-else').value = dest_else;
+        $(".btn-add-tc").on("click", function() {
+            $("#timeConditionsContainer").append(generateTimeConditionBlock());
+        });
 
-        const timeCheckbox = document.getElementById('time-condition-enabled');
-        timeCheckbox.checked = time_enabled;
-        
-        if (time_enabled) {
-            document.getElementById('time-start').value = time_start || '';
-            document.getElementById('time-end').value = time_end || '';
-            document.getElementById('dest-fila-if-time').value = dest_if_time || '';
-            
-            const daysArray = days ? days.split(',') : [];
-            document.querySelectorAll('input[name="days"]').forEach(dayInput => {
-                dayInput.checked = daysArray.includes(dayInput.value);
+        $("#timeConditionsContainer").on("click", ".btn-remove-tc", function() {
+            $(this).closest(".time-condition-block").remove();
+        });
+
+        $("#timeConditionsContainer").on("change", ".day-checkbox", function() {
+            const parentBlock = $(this).closest(".time-condition-block");
+            const selectedDays = [];
+            parentBlock.find(".day-checkbox:checked").each(function() {
+                selectedDays.push($(this).val());
             });
+            parentBlock.find(".days-hidden").val(selectedDays.join(","));
+        });
+
+        function editRota(button) {
+            const data = $(button).data();
+            $("#rotaForm input[name='id']").val(data.id);
+            $("#rotaForm input[name='nome']").val(data.nome);
+            $("#rotaForm input[name='numero_entrada']").val(data.numero_entrada);
+            $("#rotaForm select[name='dest_fila_else']").val(data.dest_fila_else);
+
+            $("#timeConditionsContainer").empty();
+            if (data.time_conditions && data.time_conditions.length > 0) {
+                const timeConditions = JSON.parse(data.time_conditions.replace(/\\'/g, '"'));
+                timeConditions.forEach(tc => {
+                    $("#timeConditionsContainer").append(generateTimeConditionBlock(tc));
+                });
+            }
+            $("#timeConditionsContainer .time-condition-block").each(function() {
+                const parentBlock = $(this);
+                const selectedDays = [];
+                parentBlock.find(".day-checkbox:checked").each(function() {
+                    selectedDays.push($(this).val());
+                });
+                parentBlock.find(".days-hidden").val(selectedDays.join(","));
+            });
+            $('html, body').animate({ scrollTop: $("#rotaForm").offset().top }, 500);
         }
-        toggleTimeCondition();
 
-        document.getElementById('form-title').innerText = "Editar Rota";
-        document.getElementById('btn-delete').disabled = false;
-    }
-
-    function resetForm() {
-        if (currentSelectedLi) {
-            currentSelectedLi.classList.remove('selected');
-            currentSelectedLi = null;
+        function resetForm() {
+            $("#rotaForm")[0].reset();
+            $("#rotaForm input[name='id']").val("");
+            $("#timeConditionsContainer").empty();
+            $('html, body').animate({ scrollTop: $("#rotaForm").offset().top }, 500);
         }
-        document.getElementById('route-form').reset();
-        document.getElementById('route-id').value = '';
-        document.getElementById('form-title').innerText = "Nova Rota";
-        document.getElementById('btn-delete').disabled = true;
-        toggleTimeCondition();
-    }
 
-    function excluirRota() {
-        const routeId = document.getElementById("route-id").value;
-        if (!routeId) {
-            alert("Selecione uma rota da lista para excluir.");
-            return;
-        }
-        if (confirm('Tem certeza que deseja excluir esta rota?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = "{{ url_for('rotas.excluir_rota') }}";
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'id';
-            input.value = routeId;
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
-
-    function toggleTimeCondition() {
-        const checkbox = document.getElementById('time-condition-enabled');
-        const fields = document.getElementById('time-condition-fields');
-        const elseLabel = document.getElementById('dest-else-label');
-        fields.style.display = checkbox.checked ? 'block' : 'none';
-        elseLabel.textContent = checkbox.checked ? 'Destino Padrão (se fora do horário)' : 'Destino Padrão';
-    }
-
-    document.addEventListener('DOMContentLoaded', resetForm);
-</script>
+        $(document).ready(function() { resetForm(); });
+    </script>
 {% endblock %}
 

@@ -1,4 +1,3 @@
-# /opt/micro-pbx/reload_extensions.py
 import os
 from database import get_db
 
@@ -7,106 +6,116 @@ EXTENSIONS_CONF_PATH = '/etc/asterisk/extensions.conf'
 # --- Funções de Busca no Banco de Dados ---
 
 def get_all_peers(db):
-    """Busca todos os NÚMEROS de ramais."""
     peers_raw = db.execute("SELECT ramal FROM ramais ORDER BY ramal").fetchall()
     return [str(p['ramal']) for p in peers_raw]
 
 def get_all_queues(db):
-    """Busca todos os NÚMEROS de filas."""
     queues_raw = db.execute("SELECT fila FROM filas ORDER BY fila").fetchall()
     return [str(q['fila']) for q in queues_raw]
 
 def get_all_routes(db):
-    """Busca todas as rotas customizadas."""
-    return db.execute("SELECT * FROM rotas ORDER BY nome").fetchall()
+    """Busca todas as rotas customizadas com suas time conditions."""
+    routes_raw = db.execute("SELECT * FROM rotas ORDER BY nome").fetchall()
+    routes = []
+    for r in routes_raw:
+        time_conditions = db.execute("SELECT * FROM time_conditions WHERE rota_id = ?", (r['id'],)).fetchall()
+        r = dict(r)
+        r['time_conditions'] = [dict(tc) for tc in time_conditions]
+        routes.append(r)
+    return routes
 
 # --- Função Principal de Geração ---
 
 def generate_extensions_conf():
-    """Gera o conteúdo completo do arquivo extensions.conf com um contexto unificado."""
     print("Iniciando a geração do arquivo extensions.conf...")
     db = get_db()
-    
+
     peers = get_all_peers(db)
     queues = get_all_queues(db)
     routes = get_all_routes(db)
-    
-    # --- Inicia a construção do dialplan ---
+
     conf_parts = [
         "; Arquivo gerado automaticamente pelo Micro PABX",
         "[interno] ; Contexto Unificado para todas as chamadas"
     ]
 
-    # --- 1. Lógica Customizada: Rotas de Entrada ---
+    # --- Rotas de Entrada ---
     if routes:
-        conf_parts.extend([
-            "\n; --- Regras Customizadas: Rotas de Entrada ---"
-        ])
+        conf_parts.append("\n; --- Regras Customizadas: Rotas de Entrada ---")
         for route in routes:
             exten = route['numero_entrada']
-            
-            # Busca os NÚMEROS das filas de destino a partir de seus IDs
-            fila_else_id = route['dest_fila_else']
-            fila_else_num_row = db.execute("SELECT fila FROM filas WHERE id = ?", (fila_else_id,)).fetchone()
-            
-            if not fila_else_num_row: continue # Pula a rota se a fila de destino não existe mais
 
-            fila_else_num = fila_else_num_row['fila']
+            fila_else_num = None
+            if route['dest_fila_else']:
+                fila_else_row = db.execute("SELECT fila FROM filas WHERE id = ?", (route['dest_fila_else'],)).fetchone()
+                if fila_else_row:
+                    fila_else_num = fila_else_row['fila']
 
             conf_parts.append(f"\n; Rota: {route['nome']}")
             conf_parts.append(f"exten => {exten},1,NoOp(### Rota de Entrada: {route['nome']} para o numero {exten} ###)")
 
-            if route['time_condition_enabled']:
-                time_range = f"{route['time_start']}-{route['time_end']}"
-                days = route['days'].replace(",","|")
-                fila_if_time_id = route['dest_fila_if_time']
-                fila_if_time_num_row = db.execute("SELECT fila FROM filas WHERE id = ?", (fila_if_time_id,)).fetchone()
+            if route['time_conditions']:
+                # Para cada time condition
+                for tc in route['time_conditions']:
+                    if not tc['dest_fila_if_time']:
+                        continue
+                    fila_if_time_row = db.execute("SELECT fila FROM filas WHERE id = ?", (tc['dest_fila_if_time'],)).fetchone()
+                    if not fila_if_time_row:
+                        continue
+                    fila_if_time_num = fila_if_time_row['fila']
+                    time_start = tc['time_start']
+                    time_end = tc['time_end']
+                    days = tc['days'].split(',')  # separa dias individuais
 
-                if not fila_if_time_num_row: continue # Pula se a fila de tempo não existe
+                    for day in days:
+                        day = day.strip()
+                        if not day:
+                            continue
+                        conf_parts.append(f"exten => {exten},n,GotoIfTime({time_start}-{time_end},{day},*,*?time-{day}-{time_start})")
 
-                fila_if_time_num = fila_if_time_num_row['fila']
-                
-                conf_parts.extend([
-                    f"exten => {exten},n,GotoIfTime({time_range},{days},*,*?time-match)",
-                    f"exten => {exten},n,Queue({fila_else_num}) ; Rota fora do horario",
-                    f"exten => {exten},n,Hangup()",
-                    f"exten => {exten},n(time-match),Queue({fila_if_time_num}) ; Rota dentro do horario",
-                    f"exten => {exten},n,Hangup()"
-                ])
+                    # Fora do horário (após todas as condições)
+                    if fila_else_num:
+                        conf_parts.append(f"exten => {exten},n,Queue({fila_else_num}) ; Rota fora do horario")
+                    conf_parts.append(f"exten => {exten},n,Hangup()")
+
+                    # Destino dentro do horário (para cada day)
+                    for day in days:
+                        day = day.strip()
+                        if not day:
+                            continue
+                        conf_parts.append(f"exten => {exten},n(time-{day}-{time_start}),Queue({fila_if_time_num}) ; Rota dentro do horario")
+                        conf_parts.append(f"exten => {exten},n,Hangup()")
             else:
-                conf_parts.extend([
-                    f"exten => {exten},n,Queue({fila_else_num})",
-                    f"exten => {exten},n,Hangup()"
-                ])
+                # Sem time condition
+                if fila_else_num:
+                    conf_parts.append(f"exten => {exten},n,Queue({fila_else_num})")
+                conf_parts.append(f"exten => {exten},n,Hangup()")
 
-    # --- 2. Lógica Automática: Chamadas para Filas ---
+    # --- Chamadas para Filas ---
     if queues:
-        conf_parts.extend(["\n; --- Regra Automatica: Chamadas para Filas ---",])
+        conf_parts.append("\n; --- Regra Automatica: Chamadas para Filas ---")
         for queue in queues:
             conf_parts.extend([
                 f"exten => {queue},1,NoOp(### Chamada interna para Fila ${{EXTEN}} ###)",
-                f"exten => {queue},n,Queue(${{EXTEN}})", 
+                f"exten => {queue},n,Queue(${{EXTEN}})",
                 f"exten => {queue},n,Hangup()\n"
             ])
 
-    # --- 3. Lógica Automática: Chamadas para outros Ramais ---
+    # --- Chamadas para Ramais ---
     if peers:
         conf_parts.extend([
             "\n; --- Regra Automatica: Chamadas para outros Ramais ---",
             f"exten => _X,1,NoOp(### Chamada interna para Ramal ${{EXTEN}} ###)",
             f"exten => _X,n,Dial(SIP/${{EXTEN}},20,Ttr)",
-            f"exten => _X,n,Hangup()\n\n"
-
+            f"exten => _X,n,Hangup()\n",
             f"exten => _X.,1,NoOp(### Chamada interna para Ramal ${{EXTEN}} ###)",
             f"exten => _X.,n,Dial(SIP/${{EXTEN}},20,Ttr)",
             f"exten => _X.,n,Hangup()\n"
         ])
 
-
-    
     db.close()
 
-    # --- Finaliza e Escreve o Arquivo ---
+    # --- Escreve o arquivo ---
     conf_content = "\n".join(conf_parts)
     try:
         with open(EXTENSIONS_CONF_PATH, 'w') as f:
