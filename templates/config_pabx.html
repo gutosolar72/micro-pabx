@@ -5,15 +5,15 @@
 {% block content %}
 <style>
     .dashboard-card {
-        padding: 25px;
+        padding: 15px;
     }
 
     /* Botões grandes de navegação */
     .action-buttons {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Layout responsivo */
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Layout responsivo */
         gap: 15px;
-        margin: 25px 0;
+        margin: 5px 0;
     }
     .action-button {
         display: flex;
@@ -43,40 +43,6 @@
     .btn-ramais { background-color: #007bff; }
     .btn-filas { background-color: #17a2b8; }
     .btn-rede { background-color: #6f42c1; }
-
-    /* Seção de Status */
-    .status-section {
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-    }
-    .status-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-    }
-    .status-column h4 {
-        color: #0056b3;
-        border-bottom: 2px solid #f0f0f0;
-        padding-bottom: 8px;
-    }
-    .status-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        font-size: 14px;
-    }
-    .status-list li {
-        padding: 8px 5px;
-        border-bottom: 1px solid #f5f5f5;
-    }
-    .status-list li:last-child {
-        border-bottom: none;
-    }
-    .no-data {
-        color: #888;
-        font-style: italic;
-    }
     .action-button.btn-rotas {
         background-color: #ffc107; /* Um amarelo/dourado para destacar */
         color: #212529; /* Texto escuro para contraste */
@@ -87,8 +53,7 @@
 </style>
 
 <div class="card dashboard-card">
-    <h2>Painel de Controle</h2>
-    <p>Selecione uma das opções abaixo para gerenciar as configurações do seu PABX.</p>
+    <h2><center>Painel de Controle</center></h2>
 
     <div class="action-buttons">
         <a href="{{ url_for('pabx.cadastro_ramal') }}" class="action-button btn-ramais">
@@ -107,37 +72,6 @@
             <span class="icon">&#127760;</span> <!-- Ícone de globo/rede -->
             <span class="text">Configurar Rede</span>
         </a>
-    </div>
-
-    <div class="status-section">
-        <h3>Status do Sistema</h3>
-        <div class="status-grid">
-            <div class="status-column">
-                <h4>Ramais ({{ ramais|length }})</h4>
-                {% if ramais %}
-                <ul class="status-list">
-                    {% for ramal in ramais %}
-                        <li><strong>{{ ramal.ramal }}</strong> - {{ ramal.nome }}</li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="no-data">Nenhum ramal cadastrado.</p>
-                {% endif %}
-            </div>
-
-            <div class="status-column">
-                <h4>Filas ({{ filas|length }})</h4>
-                {% if filas %}
-                <ul class="status-list">
-                    {% for fila in filas %}
-                        <li><strong>{{ fila.fila }}</strong> - {{ fila.nome }}</li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="no-data">Nenhuma fila cadastrada.</p>
-                {% endif %}
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
