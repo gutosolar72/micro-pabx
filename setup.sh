@@ -12,6 +12,9 @@ BASE_DIR=$(cd "$(dirname "$0")" && pwd)
 echo "--- Iniciando Setup do Nanosip ---"
 
 echo "[1/4] Configurando permissões do sudoers..."
+echo "# Permite ao usuário pabx iniciar os serviços de tarefa do NanoSip sem senha." > "$BASE_DIR/config/nanosip_sudoers"
+echo "nanosip ALL=(root) NOPASSWD: /bin/systemctl start nanosip-admin@*.service, /usr/sbin/asterisk" >> "$BASE_DIR/config/nanosip_sudoers"
+
 ln -sf "$BASE_DIR/config/nanosip_sudoers" "/etc/sudoers.d/nanosip_sudoers"
 visudo -c -f /etc/sudoers.d/nanosip_sudoers
 chown root:root "$BASE_DIR/config/nanosip_sudoers"
