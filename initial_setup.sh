@@ -28,6 +28,7 @@ make install
 make samples
 
 sed -i "/;runuser/runuser/" /etc/asterisk/asterisk.conf
+sed -i "/;rungroup/rungroup/" /etc/asterisk/asterisk.conf
 
 # ============= Systemd Asterisk =============
 cat << EOF > /etc/systemd/system/asterisk.service
@@ -44,10 +45,5 @@ ExecStop=/usr/sbin/asterisk stop -q
 WantedBy=multi-user.target
 EOF
 # ==============================================
-
-su - nanosip
-cd /opt
-git clone https://github.com/gutosolar72/nanosip
-exit
 
 exec /opt/nanosip/setup.sh
