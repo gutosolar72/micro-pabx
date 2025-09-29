@@ -12,8 +12,13 @@ echo "nanosip" | passwd --stdin username
 useradd -r -s /bin/false --no-create-home asterisk
 useradd nanosip
 
+echo "alias vim='vim.tiny'" >> /root/.bashrc
+echo "alias vim='vim.tiny'" >> /home/nanosip/.bashrc
+echo "alias vim='vim.tiny'" >> /home/admin/.bashrc
+
+source ~/.bashrc
+
 su - nanosip
-mkdir -p /home/nanosip/.ssh
 
 # INSTALANDO PACOTES NECESSÁRIOS
 #INSTALANDO O ASTERISK
