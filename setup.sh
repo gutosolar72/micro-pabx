@@ -2,9 +2,12 @@
 
 echo "--- Iniciando Setup do Nanosip ---"
 
+su - nanosip
+virtualenv "$BASEDIR/"
+exit
+
 # Pega o caminho absoluto do diretório onde o script está
 BASE_DIR=$(cd "$(dirname "$0")" && pwd)
-virtualenv "$BASEDIR/"
 
 echo "[1/4] Configurando permissões do sudoers..."
 echo "# Permite ao usuário pabx iniciar os serviços de tarefa do NanoSip sem senha." > "$BASE_DIR/config/nanosip_sudoers"

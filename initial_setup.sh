@@ -4,7 +4,7 @@
 set -e
 apt-get update
 apt-get upgrade
-apt install -y build-essential subversion virtualenv git sudo
+apt install -y build-essential subversion python3 virtualenv sudo
 
 useradd admin
 echo "nanosip" | passwd --stdin username
@@ -46,4 +46,5 @@ WantedBy=multi-user.target
 EOF
 # ==============================================
 
+chown -R nanosip:nanosip /opt/nanosip
 exec /opt/nanosip/setup.sh
