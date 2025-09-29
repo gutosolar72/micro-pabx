@@ -1,15 +1,10 @@
 #!/bin/bash
 
-# Script de Setup para o NanoSip
-# Este script deve ser executado com 'sudo' (ex: sudo ./setup.sh)
-
-# Garante que o script pare se qualquer comando falhar
-set -e
+echo "--- Iniciando Setup do Nanosip ---"
 
 # Pega o caminho absoluto do diretório onde o script está
 BASE_DIR=$(cd "$(dirname "$0")" && pwd)
-
-echo "--- Iniciando Setup do Nanosip ---"
+virtualenv "$BASEDIR/"
 
 echo "[1/4] Configurando permissões do sudoers..."
 echo "# Permite ao usuário pabx iniciar os serviços de tarefa do NanoSip sem senha." > "$BASE_DIR/config/nanosip_sudoers"
@@ -31,6 +26,8 @@ echo "Dependências instaladas."
 
 echo "[4/4] Recarregando e ativando os serviços..."
 systemctl daemon-reload
+systemctl enable asterisk.service
+systemctl restart asterisk.service
 systemctl enable nanosip.service
 systemctl restart nanosip.service
 echo "Serviço principal 'nanosip.service' ativado e iniciado."
