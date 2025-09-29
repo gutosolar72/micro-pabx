@@ -40,7 +40,7 @@
     <h2 id="form-title">Nova Fila</h2>
 
     <!-- Formulário -->
-    <form method="POST" id="form-fila" action="{{ url_for('pabx.cadastro_fila') }}">
+    <form method="POST" id="form-fila" action="{{ url_for('nanosip.cadastro_fila') }}">
         <input type="hidden" name="id" id="fila-id">
 
         <div class="form-row">
@@ -144,7 +144,7 @@ function excluirFilaDireto(id, numero) {
     if (confirm(`Tem certeza que deseja excluir a fila ${numero}?`)) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = "{{ url_for('pabx.excluir_fila') }}";
+        form.action = "{{ url_for('nanosip.excluir_fila') }}";
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'id';

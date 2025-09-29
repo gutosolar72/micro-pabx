@@ -1,5 +1,5 @@
 [Unit]
-Description=PABX Admin Task Runner
+Description=NanoSip Admin Task Runner
 
 [Service]
 Type=oneshot

@@ -65,6 +65,7 @@ def config_rede():
     if request.method == "POST":
         try:
             # 1. Coleta os dados do formulário
+            hostname = request.form["hostname"]
             iface = request.form["iface"]
             ip = request.form["ip"]
             netmask = request.form["netmask"]
@@ -99,10 +100,11 @@ iface {iface} inet static
             temp_data = json.dumps({
                 "interfaces": interfaces_content,
                 "resolv": resolv_content,
-                "iface": iface
+                "iface": iface,
+                "hostname": hostname
             })
             
-            tmp_file_path = "/tmp/pabx_net_config.json"
+            tmp_file_path = "/tmp/nanosip_net_config.json"
             with open(tmp_file_path, "w") as f:
                 f.write(temp_data)
             

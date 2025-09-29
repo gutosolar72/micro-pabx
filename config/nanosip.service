@@ -1,5 +1,5 @@
 [Unit]
-Description=Micro PABX Flask Application
+Description=NanoSip Flask Application
 After=network.target asterisk.service
 
 [Service]

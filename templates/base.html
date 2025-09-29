@@ -96,7 +96,7 @@
     </header>
     <nav>
         <a href="{{ url_for('main.index') }}">Status</a>
-        <a href="{{ url_for('pabx.config_pabx') }}">Configuração</a>      <!-- CORRIGIDO -->
+        <a href="{{ url_for('nanosip.config_nanosip') }}">Configuração</a>      <!-- CORRIGIDO -->
         {% if session.get('user') %}
             <span>Bem-vindo, {{ session.get('user') }}</span>
         | <a href="{{ url_for('auth.logout') }}">Logout</a>              <!-- CORRIGIDO -->

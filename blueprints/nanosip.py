@@ -1,4 +1,4 @@
-# /opt/nanosip/blueprints/pabx.py
+# /opt/nanosip/blueprints/nanosip.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from auth import login_required
 from database import get_ramais, get_filas, get_localnets, get_db
@@ -9,18 +9,18 @@ from cadastro import (
     associar_ramal_fila, desassociar_todos_ramais_da_fila
 )
 
-pabx_bp = Blueprint("pabx", __name__, template_folder="../templates")
+nanosip_bp = Blueprint("nanosip", __name__, template_folder="../templates")
 
-@pabx_bp.route("/pabx")
+@nanosip_bp.route("/nanosip")
 @login_required
-def config_pabx():
+def config_nanosip():
     ramais = get_ramais()
     filas = get_filas()
     localnets = get_localnets()
-    return render_template("config_pabx.html", ramais=ramais, filas=filas, localnets=localnets)
+    return render_template("config_nanosip.html", ramais=ramais, filas=filas, localnets=localnets)
 
 # --- ROTAS DE RAMAL (Lógica de Edição Final) ---
-@pabx_bp.route("/ramal", methods=["GET", "POST"])
+@nanosip_bp.route("/ramal", methods=["GET", "POST"])
 @login_required
 def cadastro_ramal():
     if request.method == "POST":
@@ -43,12 +43,12 @@ def cadastro_ramal():
         except Exception as e:
             flash(f"Erro ao processar ramal: {str(e)}", "danger")
         
-        return redirect(url_for("pabx.cadastro_ramal"))
+        return redirect(url_for("nanosip.cadastro_ramal"))
 
     ramais = get_ramais()
     return render_template("config_ramais.html", ramais=ramais)
 
-@pabx_bp.route("/ramal/excluir", methods=["POST"])
+@nanosip_bp.route("/ramal/excluir", methods=["POST"])
 @login_required
 def excluir_ramal():
     ramal_id = request.form.get("id")
@@ -56,10 +56,10 @@ def excluir_ramal():
         success, msg = remover_ramal(ramal_id)
         if success: flash(msg, "success")
         else: flash(msg, "danger")
-    return redirect(url_for("pabx.cadastro_ramal"))
+    return redirect(url_for("nanosip.cadastro_ramal"))
 
 # --- ROTAS DE FILA (Lógica de Edição Final) ---
-@pabx_bp.route("/fila", methods=["GET", "POST"])
+@nanosip_bp.route("/fila", methods=["GET", "POST"])
 @login_required
 def cadastro_fila():
     if request.method == "POST":
@@ -99,14 +99,14 @@ def cadastro_fila():
         except Exception as e:
             flash(f"Erro ao processar fila: {str(e)}", "danger")
         
-        return redirect(url_for("pabx.cadastro_fila"))
+        return redirect(url_for("nanosip.cadastro_fila"))
 
     # Para requisições GET
     ramais = get_ramais()
     filas = get_filas()
     return render_template("config_filas.html", ramais=ramais, filas=filas)
 
-@pabx_bp.route("/fila/excluir", methods=["POST"])
+@nanosip_bp.route("/fila/excluir", methods=["POST"])
 @login_required
 def excluir_fila():
     fila_id = request.form.get("id")
@@ -114,5 +114,5 @@ def excluir_fila():
         success, msg = remover_fila(fila_id)
         if success: flash(msg, "success")
         else: flash(msg, "danger")
-    return redirect(url_for("pabx.cadastro_fila"))
+    return redirect(url_for("nanosip.cadastro_fila"))
 

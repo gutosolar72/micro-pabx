@@ -30,7 +30,7 @@ case $ACTION in
 
     "update_network_config")
         # Lê os dados do arquivo temporário criado pelo Flask
-        TMP_FILE="/tmp/pabx_net_config.json"
+        TMP_FILE="/tmp/nanosip_net_config.json"
         if [ ! -f "$TMP_FILE" ]; then
             echo "Erro: Arquivo de configuração temporário não encontrado." >&2
             exit 1
@@ -41,10 +41,16 @@ case $ACTION in
         INTERFACES_CONTENT=$(jq -r '.interfaces' "$TMP_FILE")
         RESOLV_CONTENT=$(jq -r '.resolv' "$TMP_FILE")
         IFACE=$(jq -r '.iface' "$TMP_FILE")
+        HOSTNAME_CONTENT=$(jq -r '.hostname' "$TMP_FILE")
 
         # Escreve os arquivos de configuração
         echo "$INTERFACES_CONTENT" > /etc/network/interfaces
         echo "$RESOLV_CONTENT" > /etc/resolv.conf
+        echo "$HOSTNAME_CONTENT" > /etc/hostname
+        echo "$HOSTNAME_CONTENT" > /proc/sys/kernel/hostname
+        sed -i "1s/.*/127.0.0.1       localhost $HOSTNAME_CONTENT/" /etc/hosts 
+        sed -i "2s/.*/127.0.1.1       $HOSTNAME_CONTENT/" /etc/hosts
+       
 
         # Aplica as configurações
         echo "Aplicando configurações de rede para a interface $IFACE..."

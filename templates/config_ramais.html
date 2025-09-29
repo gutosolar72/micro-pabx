@@ -25,7 +25,7 @@
     <h2 id="form-title">Novo Ramal</h2>
 
     <!-- Formulário -->
-    <form method="POST" id="form-ramal" action="{{ url_for('pabx.cadastro_ramal') }}">
+    <form method="POST" id="form-ramal" action="{{ url_for('nanosip.cadastro_ramal') }}">
         <input type="hidden" name="id" id="ramal-id">
 
         <div class="form-row">
@@ -111,7 +111,7 @@ function excluirRamalDireto(id, numero) {
     if (confirm(`Tem certeza que deseja excluir o ramal ${numero}?`)) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = "{{ url_for('pabx.excluir_ramal') }}";
+        form.action = "{{ url_for('nanosip.excluir_ramal') }}";
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'id';
