@@ -6,11 +6,9 @@ apt-get update
 apt-get upgrade
 apt install -y build-essential subversion python3 virtualenv sudo
 
-useradd admin
-echo "nanosip" | passwd --stdin username
+useradd -m nanosip
 
 useradd -r -s /bin/false --no-create-home asterisk
-useradd nanosip
 
 echo "alias vim='vim.tiny'" >> /root/.bashrc
 echo "alias vim='vim.tiny'" >> /home/nanosip/.bashrc
