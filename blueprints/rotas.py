@@ -72,7 +72,7 @@ def config_rotas():
             # Reload Asterisk
             try:
                 subprocess.run(
-                    ["sudo", "systemctl", "start", "pabx-admin@apply_config.service"],
+                    ["sudo", "systemctl", "start", "nanosip-admin@apply_config.service"],
                     check=True,
                 )
                 flash("Configurações do Asterisk sendo aplicadas em segundo plano.", "info")
@@ -107,7 +107,7 @@ def excluir_rota():
             # Reload Asterisk
             try:
                 subprocess.run(
-                    ["sudo", "systemctl", "start", "pabx-admin@apply_config.service"],
+                    ["sudo", "systemctl", "start", "nanosip-admin@apply_config.service"],
                     check=True,
                 )
                 flash("Configurações do Asterisk sendo aplicadas em segundo plano.", "info")

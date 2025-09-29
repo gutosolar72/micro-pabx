@@ -96,6 +96,7 @@ function selecionarRamalTabela(id, numero, nome, senha) {
     document.getElementById("senha").value = senha || "";
     document.getElementById("form-title").innerText = "Editar Ramal " + numero;
     document.getElementById("btn-delete").disabled = false;
+    document.getElementById("nome").focus();
 }
 
 function resetForm() {

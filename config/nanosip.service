@@ -3,10 +3,10 @@ Description=Micro PABX Flask Application
 After=network.target asterisk.service
 
 [Service]
-User=pabx
-Group=pabx
-WorkingDirectory=/opt/micro-pbx
-ExecStart=/opt/micro-pbx/venv/bin/python3 app.py
+User=nanosip
+Group=nanosip
+WorkingDirectory=/opt/nanosip
+ExecStart=/opt/nanosip/venv/bin/python3 app.py
 Restart=always
 
 [Install]

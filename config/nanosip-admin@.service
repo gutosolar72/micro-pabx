@@ -1,0 +1,10 @@
+[Unit]
+Description=PABX Admin Task Runner
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/nanosip
+ExecStart=/bin/bash -c 'echo "Executando tarefa: %i"; /opt/nanosip/system_manager.sh %i'
+

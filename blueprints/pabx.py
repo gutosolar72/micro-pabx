@@ -1,4 +1,4 @@
-# /opt/micro-pbx/blueprints/pabx.py
+# /opt/nanosip/blueprints/pabx.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from auth import login_required
 from database import get_ramais, get_filas, get_localnets, get_db

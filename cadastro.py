@@ -1,4 +1,4 @@
-# /opt/micro-pbx/cadastro.py
+# /opt/nanosip/cadastro.py
 import sqlite3
 from database import get_db
 

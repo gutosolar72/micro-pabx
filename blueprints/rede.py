@@ -1,4 +1,4 @@
-# /opt/micro-pbx/blueprints/rede.py
+# /opt/nanosip/blueprints/rede.py
 
 from flask import Blueprint, request, render_template, redirect, url_for, flash
 import subprocess
@@ -36,7 +36,7 @@ def carrega_config_atual():
         "dns": get_dns_servers() or "Não definido",
     }
     try:
-        service_name = "pabx-admin@get_network_info.service"
+        service_name = "nanosip-admin@get_network_info.service"
         # Inicia o serviço oneshot para obter as informações
         subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
         
@@ -107,7 +107,7 @@ iface {iface} inet static
                 f.write(temp_data)
             
             # 5. Inicia o serviço systemd que lerá o arquivo temporário e aplicará as configs
-            service_name = "pabx-admin@update_network_config.service"
+            service_name = "nanosip-admin@update_network_config.service"
             subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
             
             flash("Tarefa de atualização de rede iniciada com sucesso.", "success")

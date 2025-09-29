@@ -1,4 +1,4 @@
-# /opt/micro-pbx/reload_queues.py
+# /opt/nanosip/reload_queues.py
 
 from database import get_db # Usando a função centralizada
 

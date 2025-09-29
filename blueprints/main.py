@@ -1,4 +1,4 @@
-# /opt/micro-pbx/blueprints/main.py
+# /opt/nanosip/blueprints/main.py
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 import subprocess
@@ -17,7 +17,7 @@ def index():
 def reload():
     try:
         # Usando o serviço systemd para aplicar as configurações como root
-        subprocess.run(["sudo", "systemctl", "start", "pabx-admin@apply_config.service"], check=True)
+        subprocess.run(["sudo", "systemctl", "start", "nanosip-admin@apply_config.service"], check=True)
         flash("Tarefa de aplicar configurações iniciada com sucesso!", "success")
     except Exception as e:
         flash(f"Erro ao iniciar tarefa de reload: {str(e)}", "danger")

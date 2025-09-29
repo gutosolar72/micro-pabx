@@ -1,4 +1,4 @@
-# /opt/micro-pbx/app.py
+# /opt/nanosip/app.py
 
 from flask import Flask, render_template, redirect, url_for, flash, Blueprint
 import subprocess
