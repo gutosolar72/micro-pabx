@@ -73,6 +73,7 @@ WantedBy=multi-user.target
 EOF
 # ==============================================
 
+systemctl daemon-reload
 systemctl enable asterisk.service
 systemctl start asterisk.service
 
