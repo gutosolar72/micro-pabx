@@ -41,16 +41,36 @@ case $ACTION in
         INTERFACES_CONTENT=$(jq -r '.interfaces' "$TMP_FILE")
         RESOLV_CONTENT=$(jq -r '.resolv' "$TMP_FILE")
         IFACE=$(jq -r '.iface' "$TMP_FILE")
-        HOSTNAME_CONTENT=$(jq -r '.hostname' "$TMP_FILE")
+	HOSTNAME_CONTENT=$(jq -r '.hostname' "$TMP_FILE")
 
-        # Escreve os arquivos de configuração
-        echo "$INTERFACES_CONTENT" > /etc/network/interfaces
-        echo "$RESOLV_CONTENT" > /etc/resolv.conf
-        echo "$HOSTNAME_CONTENT" > /etc/hostname
-        echo "$HOSTNAME_CONTENT" > /proc/sys/kernel/hostname
-        sed -i "1s/.*/127.0.0.1       localhost $HOSTNAME_CONTENT/" /etc/hosts 
-        sed -i "2s/.*/127.0.1.1       $HOSTNAME_CONTENT/" /etc/hosts
-       
+	if [ -z "$HOSTNAME_CONTENT" ]; then
+    		echo "ERRO: Não foi possível ler o hostname do arquivo temporário."
+    		exit 1
+	fi
+
+	echo "$INTERFACES_CONTENT" > /etc/network/interfaces
+	echo "$RESOLV_CONTENT" > /etc/resolv.conf
+
+	hostnamectl set-hostname "$HOSTNAME_CONTENT"
+ 
+
+	# Ajustando o hosts 
+	HOSTS_FILE="/etc/hosts"
+	LINE_127_0_0_1="127.0.0.1\tlocalhost ${HOSTNAME_CONTENT}"
+	if grep -q "^127\.0\.0\.1" "${HOSTS_FILE}"; then
+    		sed -i "/^127\.0\.0\.1/c\\${LINE_127_0_0_1}" "${HOSTS_FILE}"
+	else
+    		echo -e "${LINE_127_0_0_1}" >> "${HOSTS_FILE}"
+	fi
+
+
+	LINE_127_0_1_1="127.0.1.1\t${HOSTNAME_CONTENT}"
+
+	if grep -q "^127\.0\.1\.1" "${HOSTS_FILE}"; then
+    		sed -i "/^127\.0\.1\.1/c\\${LINE_127_0_1_1}" "${HOSTS_FILE}"
+	else
+    	echo -e "${LINE_127_0_1_1}" >> "${HOSTS_FILE}"
+	fi
 
         # Aplica as configurações
         echo "Aplicando configurações de rede para a interface $IFACE..."

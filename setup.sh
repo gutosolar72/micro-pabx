@@ -189,6 +189,11 @@ visudo -c -f /etc/sudoers.d/nanosip_sudoers
 chmod 440 /etc/sudoers.d/nanosip_sudoers
 chown root:root /etc/sudoers.d/nanosip_sudoers
 
+# Ajustando o hosts para não dar pau no sudo
+local HOSTNAME=$(hostname)
+local TARGET_LINE="127.0.1.1\t${HOSTNAME}"
+echo -e "${TARGET_LINE}" >> /etc/hosts
+
 echo "[2/3] Configurando serviços do systemd..."
 ln -sf "$BASE_DIR/config/nanosip.service" "/etc/systemd/system/nanosip.service"
 ln -sf "$BASE_DIR/config/nanosip-admin@.service" "/etc/systemd/system/nanosip-admin@.service"
