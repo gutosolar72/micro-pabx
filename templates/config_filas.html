@@ -3,7 +3,15 @@
 {% block title %}Gerenciar Filas{% endblock %}
 
 {% block content %}
+{# --- INÍCIO DA CORREÇÃO 1: Criar o dicionário de mapeamento --- #}
+{% set ramal_map = {} %}
+{% for r in ramais %}
+    {% if ramal_map.update({r.id: r.ramal}) %}{% endif %}
+{% endfor %}
+{# --- FIM DA CORREÇÃO 1 --- #}
+
 <style>
+    /* ... (seu CSS continua o mesmo) ... */
     .form-row { display: flex; gap: 20px; margin-bottom: 15px; }
     .form-group { flex: 1; display: flex; flex-direction: column; }
     .form-group label { font-weight: bold; margin-bottom: 5px; color: #333; }
@@ -14,35 +22,14 @@
     .btn-new { background-color: #007bff; color: white; }
     .btn-delete { background-color: #dc3545; color: white; margin-left: auto; }
     .btn-delete:disabled { background-color: #ccc; cursor: not-allowed; }
-
-    .ramal-checkbox-item {
-        border: 5px solid blue;
-        width: 50%;
-        display: flex;
-        align-items: center;
-        padding: 4px 0;
-    }
-
-    .ramal-checkbox-item label {
-        border: 5px solid red;
-        align-items: center;
-        gap: 2px; /* espaço entre checkbox e texto */
-        margin: 0;
-        cursor: pointer;
-    }
-
-    .table th:last-child, .table td:last-child {
-        text-align: right;
-    }
+    .table th:last-child, .table td:last-child { text-align: right; }
 </style>
 
 <div class="card p-4">
+    <!-- ... (seu formulário continua o mesmo) ... -->
     <h2 id="form-title">Nova Fila</h2>
-
-    <!-- Formulário -->
     <form method="POST" id="form-fila" action="{{ url_for('nanosip.cadastro_fila') }}">
         <input type="hidden" name="id" id="fila-id">
-
         <div class="form-row">
             <div class="form-group" style="flex-basis: 120px; flex-grow: 0;">
                 <label for="fila">Número Fila:</label>
@@ -53,7 +40,6 @@
                 <input type="text" name="nome" id="nome" required>
             </div>
         </div>
-
         <div>
             <label>Ramais na Fila:</label>
             <div>
@@ -65,7 +51,6 @@
                 {% endfor %}
             </div>
         </div>
-
         <div class="form-actions">
             <button type="submit" class="btn-save">&#128190; Salvar</button>
             <button type="button" class="btn-new" onclick="resetForm()">&#43; Nova</button>
@@ -94,9 +79,11 @@
                     <td>{{ f.nome }}</td>
                     <td>
                         {% if f.ramais %}
-                            {% for r in f.ramais %}
-                                {{ r }} {% if not loop.last %}, {% endif %}
+                            {# --- INÍCIO DA CORREÇÃO 2: Usar o dicionário para buscar o número --- #}
+                            {% for ramal_id in f.ramais %}
+                                {{ ramal_map.get(ramal_id, 'ID ' + ramal_id|string) }}{% if not loop.last %}, {% endif %}
                             {% endfor %}
+                            {# --- FIM DA CORREÇÃO 2 --- #}
                         {% else %}
                             Nenhum
                         {% endif %}
@@ -114,6 +101,7 @@
     {% endif %}
 </div>
 
+<!-- ... (seu JavaScript continua o mesmo) ... -->
 <script>
 function selectFilaTabela(id, numero, nome, ramaisAssociados) {
     document.getElementById('fila-id').value = id;
@@ -121,17 +109,13 @@ function selectFilaTabela(id, numero, nome, ramaisAssociados) {
     filaInput.value = numero;
     filaInput.readOnly = true;
     document.getElementById('nome').value = nome;
-
-    // Marca os checkboxes de acordo com o array [1,2]
     document.querySelectorAll('input[name="ramais"]').forEach(checkbox => {
         checkbox.checked = ramaisAssociados.includes(parseInt(checkbox.value, 10));
     });
-
     document.getElementById('form-title').innerText = "Editar Fila " + numero;
     document.getElementById('btn-delete').disabled = false;
     document.getElementById('nome').focus();
 }
-
 function resetForm() {
     document.getElementById('form-fila').reset();
     document.getElementById('fila-id').value = '';
@@ -139,7 +123,6 @@ function resetForm() {
     document.getElementById('form-title').innerText = "Nova Fila";
     document.getElementById('btn-delete').disabled = true;
 }
-
 function excluirFilaDireto(id, numero) {
     if (confirm(`Tem certeza que deseja excluir a fila ${numero}?`)) {
         const form = document.createElement('form');
@@ -156,4 +139,3 @@ function excluirFilaDireto(id, numero) {
 }
 </script>
 {% endblock %}
-
