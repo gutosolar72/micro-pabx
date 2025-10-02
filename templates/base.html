@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <title>Micro PABX</title>
+    <title>NanoSip</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -36,7 +36,7 @@
             font-size: 60px;
             font-style: italic;
             line-height: 1;
-            margin-right: 5px;
+            margin-right: 1px;
             align-items: center;
         }
         header form {
@@ -89,7 +89,7 @@
 </head>
 <body>
     <header>
-        <h1><span>&#181;</span>icro PABX</h1>
+        <h1><span>N</span><i>anoSIP</i></h1>
         <form action="{{ url_for('main.reload') }}" method="POST" style="display: inline;">
             <button type="submit">Aplicar Configurações</button>
         </form>
@@ -104,11 +104,11 @@
     </nav>
 
     <div class="container">
-	<div class="flash-messages">
-  	{% with messages = get_flashed_messages(with_categories=true) %}
-    	    {% if messages %}
-      	        {% for category, message in messages %}
-                    <div style="padding:10px; margin-bottom:10px; border-radius:5px; 
+        <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div style="padding:10px; margin-bottom:10px; border-radius:5px;
                             {% if category == 'success' %}background-color:#d4edda; color:#155724;
                             {% elif category == 'danger' %}background-color:#f8d7da; color:#721c24;
                             {% endif %}">
@@ -122,8 +122,7 @@
         {% block content %}{% endblock %}
     </div>
     <footer>
-        <p>Micro PABX - Projeto de Gerenciamento</p>
+        <p>NanoSIP - Copyright &copy; 2025 - Todos os direitos reservados.</p>
     </footer>
 </body>
 </html>
-
