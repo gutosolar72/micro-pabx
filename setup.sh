@@ -56,7 +56,7 @@ echo "--- [PARTE 1/3] Iniciando Instalação do Asterisk e Dependências ---"
 
 echo "################# Atualizando pacotes e instalando dependências ###############################"
 apt-get update
-apt-get install -y build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug
+apt-get install -y build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug sngrep tcpdump
 
 echo "################# Criando usuários do sistema #################################"
 # Cria o usuário nanosip se ele não existir
