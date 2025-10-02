@@ -224,10 +224,8 @@ iface $interface inet static
     gateway 172.16.0.10
 EOF
 
-cat config/05-nanosip-info > /etc/update-motd.d/05-nanosip-info
-chmod +x /etc/update-motd.d/05-nanosip-info
+cat config/05-nanosip-info > /etc/motd
 chmod -x /etc/update-motd.d/10-uname
-echo "" > /etc/motd
 
 echo "=============================================================================="
 echo "--- SETUP GERAL CONCLUÍDO! ---"
