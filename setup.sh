@@ -102,6 +102,7 @@ cat << EOF > /etc/sudoers.d/admin_network_reset
 admin ALL=(root) NOPASSWD: /opt/nanosip/config/reset_network.sh
 EOF
 
+echo "alias reset_network='sudo /home/admin/reset_network.sh'" >> /home/admin/.bashrc
 chmod 440 /etc/sudoers.d/admin_network_reset
 visudo -c -f /etc/sudoers.d/admin_network_reset
 
@@ -208,15 +209,17 @@ systemctl enable nanosip.service
 systemctl restart nanosip.service
 
 echo "[4/4] Setando as configurações iniciais de rede..."
+interface=`ip -o link show | awk -F': ' '{print $2}' | grep -vE 'lo|wlan' | head -n 1`
 cat << EOF > /etc/network/interfaces
 # Arquivo gerado pelo Micro PABX
 auto lo
 iface lo inet loopback
 
-auto eth0
-iface eth0 inet static
+auto $interface
+iface $interface inet static
     address 172.16.0.10
     netmask 255.255.255.0
+    gateway 172.16.0.10
 EOF
 
 echo "=============================================================================="

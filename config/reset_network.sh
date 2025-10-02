@@ -10,13 +10,14 @@
 # ==============================================================================
 
 echo "--- Iniciando Reset da Configuração de Rede ---"
+interface=`ip -o link show | awk -F': ' '{print $2}' | grep -vE 'lo|wlan' | head -n 1`
 
 # Define o conteúdo padrão para /etc/network/interfaces 
 CONFIG="auto lo
 iface lo inet loopback
 
-auto eth0
-iface eth0 inet static
+auto $interface
+iface $interface inet static
 address 172.16.0.10
 netmask 255.255.255.0
 gateway 172.16.0.10
@@ -33,6 +34,6 @@ systemctl restart networking.service
 
 echo ""
 echo "--- Reset de Rede Concluído! ---"
-echo "A interface 'eth0' agora está configurada para responder provisoriamente no IP 172.16.0.10."
+echo "A interface $interface agora está configurada para responder provisoriamente no IP 172.16.0.10."
 echo "Coloque um IP adicional da rede 172 em seu notebook e acesse o sistema para configurar a nova rede."
 
