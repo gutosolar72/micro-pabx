@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Cores para o texto
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # Sem Cor
+
+# Arte ASCII para "Nanosip" (você pode gerar outras em sites como patorjk.com/software/taag)
+echo -e "${YELLOW}"
+echo "    _   __                 _____ ________  "
+echo "   / | / /___ _____  ____ / ___//  _/ __ \ "
+echo "  /  |/ / __ \`/ __ \/ __ \\__ \ / // /_/ / "
+echo " / /|  / /_/ / / / / /_/ /__/ // // ____/  "
+echo "/_/ |_/\__,_/_/ /_/\____/____/___/_/       "
+echo -e "${NC}"
+
+# Informações do Sistema
+# Detecta a interface de rede principal
+PRIMARY_IFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -vE 'lo|wlan' | head -n 1)
+IP_ADDRESS=$(ip -o -4 addr list "$PRIMARY_IFACE" | awk '{print $4}' | cut -d/ -f1)
+
+echo "----------------------------------------------------"
+echo " Bem-vindo ao Sistema de Telefonia Nanosip"
+echo "----------------------------------------------------"
+echo ""
+echo -e "  Hostname: ${YELLOW}$(hostname)${NC}"
+echo -e "  Endereço IP ($PRIMARY_IFACE): ${YELLOW}${IP_ADDRESS:-N/A}${NC}"
+echo ""
+
+# Help para o comando de reset
+echo -e "  ${GREEN}Dica de Manutenção:${NC}"
+echo "  Para resetar as configurações de rede para DHCP,"
+echo "  execute o comando:"
+echo ""
+echo -e "    ${YELLOW}reset_network${NC}"
+echo ""
+echo "----------------------------------------------------"

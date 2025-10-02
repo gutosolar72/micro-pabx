@@ -94,7 +94,9 @@ if [ -d "/home/admin" ]; then
     ln -sf /opt/nanosip/config/reset_network.sh /home/admin/reset_network.sh
     chown -h admin:admin /home/admin/reset_network.sh
     echo "Link simbólico criado em /home/admin/reset_network.sh"
+    echo "alias reset_network='sudo /home/admin/reset_network.sh'" >> /home/admin/.bashrc
 fi
+  
 
 echo "Configurando permissões de sudo para o script de reset..."
 cat << EOF > /etc/sudoers.d/admin_network_reset
@@ -221,6 +223,11 @@ iface $interface inet static
     netmask 255.255.255.0
     gateway 172.16.0.10
 EOF
+
+cat config/05-nanosip-info > /etc/update-motd.d/05-nanosip-info
+chmod +x /etc/update-motd.d/05-nanosip-info
+chmod -x /etc/update-motd.d/10-uname
+echo "" > /etc/motd
 
 echo "=============================================================================="
 echo "--- SETUP GERAL CONCLUÍDO! ---"
