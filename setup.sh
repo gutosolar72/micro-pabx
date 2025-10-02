@@ -131,7 +131,7 @@ sed -i 's/;rungroup = asterisk/rungroup = asterisk/' /etc/asterisk/asterisk.conf
 chown -R asterisk:asterisk /var/log/asterisk /var/spool/asterisk /var/lib/asterisk /etc/asterisk
 
 # Desabilitando modulos desnecessarios do asterisk
-cat /opt/nanosip/config/modules_disable >> /etc/asterisk/modules.conf
+cat /opt/nanosip/config/asterisk_modules >> /etc/asterisk/modules.conf
 
 systemctl daemon-reload
 systemctl enable asterisk

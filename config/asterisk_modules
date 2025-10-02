@@ -1,3 +1,4 @@
+load = chan_sip.so
 noload = app_voicemail_imap.so
 noload = app_voicemail_odbc.so
 noload = chan_pjsip.so
