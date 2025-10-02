@@ -56,7 +56,7 @@ echo "--- [PARTE 1/3] Iniciando Instalação do Asterisk e Dependências ---"
 
 echo "################# Atualizando pacotes e instalando dependências ###############################"
 apt-get update
-apt-get install -y build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq
+apt-get install -y build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug
 
 echo "################# Criando usuários do sistema #################################"
 # Cria o usuário nanosip se ele não existir
@@ -177,12 +177,13 @@ echo ""
 
 echo "--- [PARTE 3/3] Configurando Serviços do Nanosip ---"
 
-echo "[1/3] Configurando permissões do sudoers..."
+echo "[1/4] Configurando permissões do sudoers..."
 # Cria o arquivo de configuração do sudoers
 cat << EOF > /etc/sudoers.d/nanosip_sudoers
 # Permite ao usuário nanosip gerenciar serviços e o Asterisk sem senha.
 nanosip ALL=(root) NOPASSWD: /bin/systemctl start nanosip-admin@*.service
 nanosip ALL=(root) NOPASSWD: /usr/sbin/asterisk -rx *
+nanosip ALL=(root) NOPASSWD: /opt/nanosip/system_manager.sh *
 EOF
 # Valida e define as permissões corretas para o arquivo sudoers
 visudo -c -f /etc/sudoers.d/nanosip_sudoers
@@ -194,17 +195,27 @@ local HOSTNAME=$(hostname)
 local TARGET_LINE="127.0.1.1\t${HOSTNAME}"
 echo -e "${TARGET_LINE}" >> /etc/hosts
 
-echo "[2/3] Configurando serviços do systemd..."
+echo "[2/4] Configurando serviços do systemd..."
 ln -sf "$BASE_DIR/config/nanosip.service" "/etc/systemd/system/nanosip.service"
 ln -sf "$BASE_DIR/config/nanosip-admin@.service" "/etc/systemd/system/nanosip-admin@.service"
 
-echo "[3/3] Recarregando e ativando os serviços..."
+echo "[3/4 Recarregando e ativando os serviços..."
 systemctl daemon-reload
 systemctl enable nanosip.service
 systemctl restart nanosip.service
 
-echo "--- [PARTE 3/3] Configuração de Serviços Concluída ---"
-echo ""
+echo "[4/4] Setando as configurações iniciais de rede..."
+cat << EOF > /etc/network/interfaces
+# Arquivo gerado pelo Micro PABX
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 172.16.0.10
+    netmask 255.255.255.0
+EOF
+
 echo "=============================================================================="
 echo "--- SETUP GERAL CONCLUÍDO! ---"
 echo "Para verificar o status da aplicação, use: sudo systemctl status nanosip.service"

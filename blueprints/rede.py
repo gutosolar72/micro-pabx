@@ -24,8 +24,8 @@ def get_dns_servers():
 
 def carrega_config_atual():
     """
-    Carrega as configurações de rede iniciando um serviço systemd que executa
-    o script get_network_info.py como root.
+    Carrega as configurações de rede executando um script de sistema como root
+    e capturando sua saída para depuração detalhada.
     """
     network_info = {
         "hostname": socket.gethostname(),
@@ -35,28 +35,66 @@ def carrega_config_atual():
         "gateway": "N/A",
         "dns": get_dns_servers() or "Não definido",
     }
+
     try:
-        service_name = "nanosip-admin@get_network_info.service"
-        # Inicia o serviço oneshot para obter as informações
-        subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
-        
-        # A saída do script estará no log do sistema (journal). Precisamos lê-la de lá.
-        # O comando busca a última entrada de log para este serviço.
-        log_output = subprocess.check_output(
-            ["journalctl", "-u", service_name, "--since", "10 seconds ago", "-o", "cat"],
-            text=True, stderr=subprocess.DEVNULL
+        script_path = "/opt/nanosip/system_manager.sh"
+        task_name = "get_network_info"
+
+        # --- MUDANÇA PRINCIPAL: CAPTURAR TUDO ---
+        # Executamos o comando e capturamos stdout e stderr, sem falhar em caso de erro.
+        # 'check=True' foi removido para que possamos inspecionar o resultado mesmo se houver erro.
+        result = subprocess.run(
+            ["sudo", script_path, task_name],
+            capture_output=True,
+            text=True,
+            timeout=10
         )
-        
-        # A saída do journalctl pode conter mais do que apenas o JSON.
-        # Encontramos a última linha que contém o JSON.
-        json_line = [line for line in log_output.splitlines() if line.strip().startswith('{')][-1]
-        data_from_script = json.loads(json_line)
-        
-        network_info.update({k: v for k, v in data_from_script.items() if v is not None})
+
+        # --- BLOCO DE DEPURAÇÃO ---
+        # Verificamos o que realmente aconteceu na execução do script.
+
+        # Se o script retornou um código de erro...
+        if result.returncode != 0:
+            # Criamos uma mensagem de erro detalhada para o flash.
+            error_details = (
+                f"O script de sistema falhou com código de saída {result.returncode}. "
+                f"Saída Padrão (STDOUT): '{result.stdout}'. "
+                f"Saída de Erro (STDERR): '{result.stderr}'."
+            )
+            flash(error_details, "danger")
+            # Retornamos o dicionário com os valores padrão para a página não quebrar.
+            return network_info
+
+        # Se o script rodou com sucesso (código 0), mas não produziu nada...
+        if not result.stdout.strip():
+            error_details = (
+                f"O script de sistema rodou com sucesso, mas não produziu saída (stdout). "
+                f"Saída de Erro (STDERR): '{result.stderr}'."
+            )
+            flash(error_details, "warning")
+            return network_info
+
+        # Se chegamos aqui, o script rodou E produziu uma saída.
+        # Agora tentamos decodificar o JSON.
+        output_json = result.stdout.strip()
+        data_from_script = json.loads(output_json)
+
+        # Atualiza o dicionário network_info com os dados obtidos
+        network_info.update(data_from_script)
+
+    except json.JSONDecodeError:
+        # Este erro agora é mais informativo.
+        flash(f"O script produziu uma saída, mas não é um JSON válido. Saída recebida: '{result.stdout}'", "danger")
+
+    except subprocess.TimeoutExpired:
+        # Ocorre se o script demorar mais de 10 segundos para responder
+        flash("A obtenção das informações de rede demorou muito para responder (timeout).", "danger")
 
     except Exception as e:
-        flash(f"Não foi possível detectar as configurações de rede via serviço. Erro: {str(e)}", "warning")
-    
+        # Captura qualquer outro erro (ex: FileNotFoundError se o script não existir)
+        flash(f"Um erro inesperado ocorreu ao buscar as informações de rede: {str(e)}", "danger")
+
+    # Retorna o dicionário, atualizado ou com os valores padrão em caso de erro.
     return network_info
 
 @rede_bp.route("/rede", methods=["GET", "POST"])
@@ -90,7 +128,7 @@ iface {iface} inet static
     netmask {netmask}
     gateway {gateway}
 """
-            
+
             dns_list = dns.replace(" ", "").split(",")
             resolv_lines = ["# Arquivo gerado pelo Micro PABX Flask"]
             resolv_lines.extend([f"nameserver {ip_dns.strip()}" for ip_dns in dns_list if ip_dns.strip()])
@@ -103,24 +141,23 @@ iface {iface} inet static
                 "iface": iface,
                 "hostname": hostname
             })
-            
+
             tmp_file_path = "/tmp/nanosip_net_config.json"
             with open(tmp_file_path, "w") as f:
                 f.write(temp_data)
-            
+
             # 5. Inicia o serviço systemd que lerá o arquivo temporário e aplicará as configs
             service_name = "nanosip-admin@update_network_config.service"
             subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
-            
+
             flash("Tarefa de atualização de rede iniciada com sucesso.", "success")
 
         except Exception as e:
             flash(f"Erro ao iniciar tarefa de atualização de rede: {str(e)}", "danger")
-            
+
         return redirect(url_for("rede.config_rede"))
 
     # Para requisições GET
     network = carrega_config_atual()
     localnets = get_localnets()
     return render_template("config_rede.html", network=network, localnets=localnets)
-
