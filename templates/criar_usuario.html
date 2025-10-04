@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2 class="mb-3">Criar Usuário</h2>
+    <form action="{{ url_for('rotas.criar_usuario') }}" method="POST">
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" name="username" id="username" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Senha</label>
+            <input type="password" name="password" id="password" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="role" class="form-label">Role</label>
+            <select name="role" id="role" class="form-select" required>
+                <option value="operador">Operador</option>
+                <option value="gerente">Gerente</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">Criar Usuário</button>
+        <a href="{{ url_for('rotas.listar_usuarios') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}
+

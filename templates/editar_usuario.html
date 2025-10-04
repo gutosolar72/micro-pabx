@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2 class="mb-3">Editar Usuário</h2>
+    <form action="{{ url_for('rotas.editar_usuario', id=user.id) }}" method="POST">
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" name="username" id="username" class="form-control" value="{{ user.username }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Senha (deixe em branco para não alterar)</label>
+            <input type="password" name="password" id="password" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label for="role" class="form-label">Role</label>
+            <select name="role" id="role" class="form-select" required>
+                <option value="operador" {% if user.role == 'operador' %}selected{% endif %}>Operador</option>
+                <option value="gerente" {% if user.role == 'gerente' %}selected{% endif %}>Gerente</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        <a href="{{ url_for('rotas.listar_usuarios') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}
+

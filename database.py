@@ -1,6 +1,7 @@
 import sqlite3
 import bcrypt
 import os
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'nanosip.db')
@@ -20,7 +21,10 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'operador',
+                    created_at DATETIME,
+                    updated_at DATETIME
                  )""")
 
     # --- Tabela de Ramais ---
@@ -81,8 +85,11 @@ def init_db():
         print("Usuário 'admin' não encontrado. Criando com senha padrão...")
         senha_padrao = "123mudar@".encode("utf-8")
         hashed = bcrypt.hashpw(senha_padrao, bcrypt.gensalt())
-        c.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                  ("admin", hashed.decode("utf-8")))
+        role = "admin"
+        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        updated_at = created_at
+        c.execute("INSERT INTO users (username, password_hash, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                  ("admin", hashed.decode("utf-8"), role, created_at, updated_at))
         print(">>> Usuário 'admin' criado com senha padrão: 123mudar@ <<<")
 
     conn.commit()

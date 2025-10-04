@@ -20,7 +20,7 @@
             color: white;
             padding: 15px;
             display: flex;
-            justify-content: space-between; /* separa título e botão */
+            justify-content: space-between;
             align-items: center;
         }
         header h1 {
@@ -75,7 +75,7 @@
             border-radius: 8px;
             padding: 20px;
             margin: 15px auto;
-            max-width: 600px;
+            max-width: 900px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
         footer {
@@ -89,35 +89,54 @@
 </head>
 <body>
     <header>
-        <h1><span>N</span><i>anoSIP</i></h1>
-        <form action="{{ url_for('main.reload') }}" method="POST" style="display: inline;">
-            <button type="submit">Aplicar Configurações</button>
-        </form>
+        <h1>nano<i><span>SIP</span></i></h1>
+        {% if session.get('role') in ['admin'] %}
+            <form action="{{ url_for('main.reload') }}" method="POST" style="display: inline;">
+                <button type="submit">Aplicar Configurações</button>
+            </form>
+        {% endif %}
+    
     </header>
     <nav>
         <a href="{{ url_for('main.index') }}">Status</a>
-        <a href="{{ url_for('nanosip.config_nanosip') }}">Configuração</a>      <!-- CORRIGIDO -->
+        {% if session.get('role') in ['admin'] %}
+            <a href="{{ url_for('nanosip.config_nanosip') }}">Configuração</a>
+        {% endif %}
+        {% if session.get('role') in ['admin', 'gerente'] %}
+            <a href="{{ url_for('rotas.listar_usuarios') }}">Usuários</a>
+        {% endif %}
+
+        {% if session.get('role') in ['admin', 'gerente', 'operador'] %}
+            <a href="{{ url_for('rotas.relatorios') }}">Relatórios</a>
+        {% endif %}
+          
+        {% if not session.get('user') %}
+            <a href="{{ url_for('auth.login') }}">Login</a>
+        {% endif %}
+
         {% if session.get('user') %}
             <span>Bem-vindo, {{ session.get('user') }}</span>
-        | <a href="{{ url_for('auth.logout') }}">Logout</a>              <!-- CORRIGIDO -->
+            | <a href="{{ url_for('auth.logout') }}">Logout</a>
         {% endif %}
     </nav>
 
     <div class="container">
         <div class="flash-messages">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div style="padding:10px; margin-bottom:10px; border-radius:5px;
-                            {% if category == 'success' %}background-color:#d4edda; color:#155724;
-                            {% elif category == 'danger' %}background-color:#f8d7da; color:#721c24;
-                            {% endif %}">
-                        {{ message | safe }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-          {% endwith %}
-</div>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div style="padding:10px; margin-bottom:10px; border-radius:5px;
+                                {% if category == 'success' %}background-color:#d4edda; color:#155724;
+                                {% elif category == 'danger' %}background-color:#f8d7da; color:#721c24;
+                                {% elif category == 'warning' %}background-color:#fff3cd; color:#856404;
+                                {% elif category == 'info' %}background-color:#cce5ff; color:#004085;
+                                {% endif %}">
+                            {{ message | safe }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
 
         {% block content %}{% endblock %}
     </div>
@@ -126,3 +145,4 @@
     </footer>
 </body>
 </html>
+
