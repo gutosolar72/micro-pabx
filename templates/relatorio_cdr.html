@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <center><h3>Relatório de Chamadas</h3></center>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Data/Hora</th>
+                <th>Origem</th>
+                <th>Destino</th>
+                <th>Duração (s)</th>
+                <th>Falado (s)</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in registros %}
+            <tr>
+                <td>{{ r.calldate }}</td>
+                <td>{{ r.src }}</td>
+                <td>{{ r.dst }}</td>
+                <td>{{ r.duration }}</td>
+                <td>{{ r.billsec }}</td>
+                <td style="color:
+                    {% if r.disposition == 'Atendida' %}blue
+                    {% elif r.disposition == 'Ocupado' %}red
+                    {% else %}black
+                    {% endif %}
+               ">
+                   {{ r.disposition }}
+               </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Paginação -->
+    <nav>
+        <ul class="pagination">
+            {% for p in range(1, total_pages + 1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('relatorios.relatorio_cdr', page=p) }}">{{ p }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}
+

@@ -1,0 +1,13 @@
+/var/log/asterisk/cdr-csv/Master.csv {
+    weekly
+    rotate 4
+    missingok
+    notifempty
+    copytruncate
+}
+/var/log/asterisk/full {
+    missingok
+    weekly
+    create 0664 asterisk asterisk
+    rotate 4
+}

@@ -170,8 +170,8 @@ def editar_usuario(id):
         if senha:
             hashed = bcrypt.hashpw(senha.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
             db.execute(
-                "UPDATE users SET username=?, password_hash=?, role=?, updated_at=? WHERE id=?",
-                (username, hashed, role, updated_at, id),
+                "UPDATE users SET password_hash=?, role=?, updated_at=? WHERE id=?",
+                (hashed, role, updated_at, id),
             )
         else:
             db.execute(

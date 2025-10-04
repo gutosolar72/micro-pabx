@@ -224,8 +224,10 @@ iface $interface inet static
     gateway 172.16.0.10
 EOF
 
-cat config/05-nanosip-info > /etc/motd
+cat "$BASE_DIR/config/05-nanosip-info" > /etc/motd
 chmod -x /etc/update-motd.d/10-uname
+
+cp "$BASE_DIR/config/nanosip_logrotate" /etc/logrotate.d/
 
 echo "=============================================================================="
 echo "--- SETUP GERAL CONCLUÍDO! ---"

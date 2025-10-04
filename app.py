@@ -14,6 +14,7 @@ from blueprints.auth import auth_bp
 from blueprints.nanosip import nanosip_bp
 from blueprints.rede import rede_bp
 from blueprints.rotas import rotas_bp
+from blueprints.relatorios import relatorios_bp
 
 # -------------------------------
 # App Flask
@@ -37,6 +38,8 @@ app.register_blueprint(auth_bp)  # Rotas de login/logout, sem prefixo
 app.register_blueprint(nanosip_bp, url_prefix='/config')
 app.register_blueprint(rede_bp, url_prefix='/config')
 app.register_blueprint(rotas_bp, url_prefix='/config')
+app.register_blueprint(relatorios_bp)
+
 
 # -------------------------------
 # Main (Ponto de Entrada)
