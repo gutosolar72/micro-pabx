@@ -71,7 +71,8 @@ def generate_extensions_conf():
                         day = day.strip()
                         if not day:
                             continue
-                        conf_parts.append(f"exten => {exten},n,GotoIfTime({time_start}-{time_end},{day},*,*?time-{day}-{time_start})")
+                        timestart = time_start.replace(':','-')
+                        conf_parts.append(f"exten => {exten},n,GotoIfTime({time_start}-{time_end},{day},*,*?time-{day}-{timestart})")
 
                     # Fora do horário (após todas as condições)
                     if fila_else_num:
@@ -83,7 +84,7 @@ def generate_extensions_conf():
                         day = day.strip()
                         if not day:
                             continue
-                        conf_parts.append(f"exten => {exten},n(time-{day}-{time_start}),Queue({fila_if_time_num}) ; Rota dentro do horario")
+                        conf_parts.append(f"exten => {exten},n(time-{day}-{timestart}),Queue({fila_if_time_num}) ; Rota dentro do horario")
                         conf_parts.append(f"exten => {exten},n,Hangup()")
             else:
                 # Sem time condition
@@ -112,6 +113,10 @@ def generate_extensions_conf():
             f"exten => _X.,n,Dial(SIP/${{EXTEN}},20,Ttr)",
             f"exten => _X.,n,Hangup()\n"
         ])
+    conf_parts.extend([
+            "\n; --- Include extensions_custom --------",
+            "#include extensions_custom.conf"
+    ])
 
     db.close()
 
@@ -126,4 +131,3 @@ def generate_extensions_conf():
 
 if __name__ == "__main__":
     generate_extensions_conf()
-

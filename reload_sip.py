@@ -29,6 +29,8 @@ def gerar_sip_conf():
             f.write(f"localnet={net['localnet']}\n")
 
         f.write("\n")
+        f.write("#include sip_custom.conf")
+        f.write("\n")
 
         # Ramais
         ramais = get_ramais()
