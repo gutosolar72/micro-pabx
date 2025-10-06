@@ -20,7 +20,7 @@ auto $interface
 iface $interface inet static
 address 172.16.0.10
 netmask 255.255.255.0
-gateway 172.16.0.10
+gateway 172.16.0.200
 "
 
 # 1. Sobrescreve o arquivo /etc/network/interfaces.

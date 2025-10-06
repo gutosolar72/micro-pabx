@@ -91,20 +91,14 @@ chmod +x /opt/nanosip/config/reset_network.sh
 chown admin:admin /opt/nanosip/config/reset_network.sh
 
 if [ -d "/home/admin" ]; then
-    ln -sf /opt/nanosip/config/reset_network.sh /home/admin/reset_network.sh
-    chown -h admin:admin /home/admin/reset_network.sh
-    echo "Link simbólico criado em /home/admin/reset_network.sh"
-    echo "alias reset_network='sudo /home/admin/reset_network.sh'" >> /home/admin/.bashrc
+    echo "alias reset_network='sudo /opt/nanosip/config/reset_network.sh'" >> /home/admin/.bashrc
 fi
   
-
 echo "Configurando permissões de sudo para o script de reset..."
 cat << EOF > /etc/sudoers.d/admin_network_reset
 # Permite ao usuário 'admin' executar o script de reset de rede sem senha.
 admin ALL=(root) NOPASSWD: /opt/nanosip/config/reset_network.sh
 EOF
-
-echo "alias reset_network='sudo /home/admin/reset_network.sh'" >> /home/admin/.bashrc
 chmod 440 /etc/sudoers.d/admin_network_reset
 visudo -c -f /etc/sudoers.d/admin_network_reset
 
