@@ -70,6 +70,15 @@ else
     echo "Usuário 'nanosip' já existe."
 fi
 
+# Cria o usuário nanosip se ele não existir
+if ! id "admin" &>/dev/null; then
+    useradd -m -s /bin/bash admin
+    echo "Usuário 'admin' criado."
+    chpasswd <<<"admin:nanosip"
+else
+    echo "Usuário 'admin' já existe."
+fi
+
 # Cria o usuário de sistema asterisk se ele não existir
 if ! id "asterisk" &>/dev/null; then
     useradd -r -s /bin/false --no-create-home asterisk
