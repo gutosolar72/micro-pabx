@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Status da Licença{% endblock %}
+
+{% block content %}
+<div class="container mt-1">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Gerenciamento de Licença NanoSip</h4>
+                </div>
+                <div class="card-body">
+                    {% if is_vm %}
+                        {% if not status.hardware_id %}
+                            <form method="POST" action="{{ url_for('main.licenca_status') }}">
+                                <div class="mb-3">
+                                    <label for="hardware_id" class="form-label">Chave da Licença</label>
+                                    <input type="text" class="form-control" id="hardware_id" name="hardware_key"
+                                           placeholder="Cole a chave fornecida pelo instalador"
+                                           value="">
+                                    <div class="form-text">Em VMs, cole a chave fornecida pelo instalador e clique em Salvar.</div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Salvar Chave</button>
+                            </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('main.licenca_status') }}">
+                            <input type="hidden" name="check_status" value="1">
+                            <button type="submit" class="btn btn-info mt-2">Checar Licença</button>
+                        </form>
+                    {% else %}
+                        <p>Esta máquina é hardware físico. A licença será gerada automaticamente e não precisa de entrada manual.</p>
+                    {% endif %}
+
+                    <hr>
+
+                    <h5 class="card-title">Status da Licença</h5>
+                    {% if status %}
+                    <div class="alert alert-info mt-3">
+                        <strong>Número da licença:</strong> {{ status.hardware_id or 'N/A' }} <br>
+                        <strong>Status da licença:</strong> {{ status.status or 'Desconhecido' }} <br>
+                        <strong>Validade:</strong> {{ status.validade or 'N/A' }}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning mt-3">
+                        Nenhum status de licença salvo ainda.
+                    </div>
+                    {% endif %}
+
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Voltar para o Painel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

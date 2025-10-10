@@ -161,3 +161,4 @@ iface {iface} inet static
     network = carrega_config_atual()
     localnets = get_localnets()
     return render_template("config_rede.html", network=network, localnets=localnets)
+

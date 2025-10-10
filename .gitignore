@@ -2,4 +2,6 @@ venv/
 __pycache__/
 *.pyc
 config/nanosip_sudoers
+config/licenca.cache
+config/hardware_id.txt
 nanosip.db

@@ -116,3 +116,4 @@ def excluir_fila():
         else: flash(msg, "danger")
     return redirect(url_for("nanosip.cadastro_fila"))
 
+

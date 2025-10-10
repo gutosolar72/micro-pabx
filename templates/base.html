@@ -76,7 +76,7 @@
             padding: 20px;
             margin: 15px auto;
             max-width: 900px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1 );
         }
         footer {
             background-color: #0056b3;
@@ -90,25 +90,27 @@
 <body>
     <header>
         <h1>nano<i><span>SIP</span></i></h1>
-        {% if session.get('role') in ['admin'] %}
+        {% if LICENSE_VALID and session.get('role') in ['admin'] %}
             <form action="{{ url_for('main.reload') }}" method="POST" style="display: inline;">
                 <button type="submit">Aplicar Configurações</button>
             </form>
         {% endif %}
-    
     </header>
     <nav>
         <a href="{{ url_for('main.index') }}">Status</a>
-        {% if session.get('role') in ['admin'] %}
-            <a href="{{ url_for('nanosip.config_nanosip') }}">Configuração</a>
-        {% endif %}
-        {% if session.get('role') in ['admin', 'gerente'] %}
-            <a href="{{ url_for('rotas.listar_usuarios') }}">Usuários</a>
-        {% endif %}
+        {% if LICENSE_VALID %}
+            {% if session.get('role') in ['admin'] %}
+                <a href="/config/nanosip">Configuração</a>
+            {% endif %}
+            {% if session.get('role') in ['admin', 'gerente'] %}
+                <a href="/config/usuarios">Usuários</a>
+            {% endif %}
 
-        {% if session.get('role') in ['admin', 'gerente', 'operador'] %}
-            <a href="{{ url_for('relatorios.relatorio_cdr') }}">Relatórios</a>
+            {% if session.get('role') in ['admin', 'gerente', 'operador'] %}
+                <a href="/relatorios">Relatórios</a>
+            {% endif %}
         {% endif %}
+        <a href="{{ url_for('main.licenca_status') }}">Licença</a>
           
         {% if not session.get('user') %}
             <a href="{{ url_for('auth.login') }}">Login</a>
