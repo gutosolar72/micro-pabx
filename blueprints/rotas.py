@@ -15,6 +15,7 @@ def license_context():
     status, _ = lic.get_license_status()
     return status == "ativo"
 
+
 # --- Decorador de permissões ---
 def requires_role(*allowed_roles):
     def decorator(f):

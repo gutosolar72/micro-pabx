@@ -9,6 +9,7 @@ import licenca as lic  # módulo de funções de licença
 
 main_bp = Blueprint('main', __name__)
 
+
 def license_context():
     """Retorna True se a licença estiver ativa (pode usar o sistema)."""
     info = lic.validate_license()

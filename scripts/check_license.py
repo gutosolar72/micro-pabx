@@ -3,15 +3,12 @@
 
 import os
 import sys
-import json
-import requests
 from datetime import datetime
-from pathlib import Path
+import requests
 
 # Adicionar o caminho do projeto
 sys.path.append("/opt/nanosip")
-
-import licenca as lic  # importa o módulo de licença
+import licenca as lic
 
 LOG_FILE = "/var/log/nanosip_licence.log"
 
@@ -24,25 +21,19 @@ def log(msg):
 
 
 def check_license_remote():
-    """Consulta a licença no servidor remoto e atualiza o arquivo local."""
-    info = lic.produce_hardware_info()
-    lic_data = lic.load_hardware_file()
-
-    hardware_id = lic_data.get("hardware_id")
-    cpu_serial = lic_data.get("cpu_serial")
-    mac = lic_data.get("mac")
-    is_vm = info.get("is_vm", False)
-
-    if not hardware_id or not cpu_serial or not mac:
-        log("❌ Nenhuma licença local encontrada para consultar.")
+    """Atualiza a licença na API se o arquivo local existir."""
+    lic_file = lic.LIC_FILE
+    if not os.path.exists(lic_file):
+        log("❌ Nenhuma licença local encontrada.")
         return False
 
-    produto = "nanosip_vm" if is_vm else "nanosip_rasp"
+    # Carrega os dados atuais
+    lic_data = lic.load_hardware_file()
     payload = {
-        "uuid": cpu_serial,
-        "mac": mac,
-        "chave_licenca": hardware_id,
-        "produto": produto
+        "uuid": lic_data.get("cpu_serial"),
+        "mac": lic_data.get("mac"),
+        "chave_licenca": lic_data.get("hardware_id"),
+        "produto": "nanosip_vm" if lic_data.get("is_vm") else "nanosip_rasp"
     }
 
     try:
@@ -52,16 +43,15 @@ def check_license_remote():
             headers={"Content-Type": "application/json"},
             timeout=10
         )
-
         if response.status_code in (200, 201):
             data = response.json()
             status_api = data.get("status", "desconhecido")
             validade = data.get("valid_until", "N/A")
 
             lic.save_hardware_file(
-                hardware_id=hardware_id,
-                cpu_serial=cpu_serial,
-                mac=mac,
+                hardware_id=payload["chave_licenca"],
+                cpu_serial=payload["uuid"],
+                mac=payload["mac"],
                 status=status_api,
                 valid_until=validade
             )
@@ -81,11 +71,16 @@ def main():
     """Fluxo principal do verificador automático."""
     log("🔍 Iniciando verificação automática da licença...")
 
+    # Atualiza a licença no servidor
     updated = check_license_remote()
 
-    # Controle do Asterisk independente
-    status_msg, level = lic.control_asterisk()
-    log(f"Asterisk: {status_msg}")
+    # Valida licença local e decide ação do Asterisk
+    license_info = lic.validate_license()
+    action = "start" if license_info["valid"] else "stop"
+
+    # Controla o Asterisk conforme a licença
+    success, msg = lic.control_asterisk(action)
+    log(f"Asterisk: {msg}")
 
     if updated:
         log("✔️ Verificação concluída com sucesso.\n")
@@ -95,4 +90,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

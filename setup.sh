@@ -65,6 +65,7 @@ echo "################# Criando usuários do sistema ###########################
 # Cria o usuário nanosip se ele não existir
 if ! id "nanosip" &>/dev/null; then
     useradd -m -s /bin/bash nanosip
+    usermod -aG sudo,systemd-journal,netdev,asterisk nanosip
     echo "Usuário 'nanosip' criado."
 else
     echo "Usuário 'nanosip' já existe."
