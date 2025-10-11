@@ -188,3 +188,84 @@ def get_protected_config_data():
         "blueprints_permitidos": blueprints_permitidos
     }
 
+def control_asterisk():
+    """
+    Controla o serviço Asterisk conforme a licença.
+    Retorna uma mensagem informativa.
+    """
+    from datetime import datetime, timedelta
+    import subprocess
+
+    status, valid_until_str = get_license_status()
+
+    def is_asterisk_active():
+        """Verifica se o Asterisk está rodando."""
+        result = subprocess.run(
+            ["systemctl", "is-active", "--quiet", "asterisk"]
+        )
+        return result.returncode == 0
+
+    def stop_asterisk():
+        """Para o Asterisk."""
+        try:
+            subprocess.run(["sudo", "systemctl", "stop", "asterisk"], check=True)
+            return True, "Asterisk parado."
+        except Exception as e:
+            return False, f"Erro ao parar Asterisk: {str(e)}"
+
+    def start_asterisk():
+        """Inicia o Asterisk."""
+        try:
+            subprocess.run(["sudo", "systemctl", "start", "asterisk"], check=True)
+            return True, "Asterisk iniciado."
+        except Exception as e:
+            return False, f"Erro ao iniciar Asterisk: {str(e)}"
+
+    # --- Sem licença cadastrada ---
+    if not status or status == "Desconhecido":
+        if is_asterisk_active():
+            _, msg = stop_asterisk()
+        else:
+            msg = "Asterisk já parado."
+        return f"Nenhuma licença encontrada. {msg}", "warning"
+
+    # --- Validar data ---
+    valid_until = None
+    if valid_until_str:
+        try:
+            valid_until = datetime.strptime(valid_until_str, "%Y-%m-%d")
+        except ValueError:
+            return "Data de validade inválida.", "danger"
+
+    today = datetime.now()
+    days_after_expiry = (today - valid_until).days if valid_until else None
+    tolerance_days = 10
+
+    # --- Licença ativa ---
+    if status == "ativo":
+        if valid_until and days_after_expiry > tolerance_days:
+            # Licença vencida + tolerância → para Asterisk
+            if is_asterisk_active():
+                _, msg = stop_asterisk()
+            else:
+                msg = "Asterisk já parado."
+            return f"Licença vencida há mais de {tolerance_days} dias. {msg}", "danger"
+        else:
+            # Licença dentro do prazo → inicia Asterisk
+            if not is_asterisk_active():
+                _, msg = start_asterisk()
+            else:
+                msg = "Asterisk funcionando."
+            return f"Licença válida. {msg}", "success"
+
+    # --- Licença pendente ou bloqueada ---
+    elif status in ["pendente", "bloqueado"]:
+        if is_asterisk_active():
+            _, msg = stop_asterisk()
+        else:
+            msg = "Asterisk já parado."
+        return f"Licença {status}. {msg}", "danger"
+
+    # --- Status desconhecido ---
+    else:
+        return "Status desconhecido da licença.", "warning"
