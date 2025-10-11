@@ -4,6 +4,7 @@ import subprocess
 import hashlib
 import json
 import os
+from datetime import datetime, timedelta
 
 # Caminhos fixos e ocultos
 BASE_DIR = "/opt/nanosip"
@@ -30,10 +31,7 @@ def load_hardware_file():
     return {}
 
 def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, valid_until=None):
-    """
-    Salva o arquivo oculto de licença (.lic.json)
-    Inclui status e validade caso fornecidos.
-    """
+    """Salva o arquivo oculto de licença (.lic.json)"""
     ensure_lic_dir()
     data = {
         "hardware_id": hardware_id,
@@ -47,7 +45,7 @@ def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, vali
 
     try:
         with open(LIC_FILE, "w") as f:
-            json.dump(data, f)
+            json.dump(data, f, indent=2)
         os.chmod(LIC_FILE, 0o600)
     except Exception as e:
         print(f"[licenca] Erro ao salvar {LIC_FILE}: {e}")
@@ -56,6 +54,7 @@ def produce_hardware_info():
     """Obtém informações básicas de hardware (UUID e MAC)."""
     info = {"is_vm": False, "uuid": None, "mac": None, "hardware_id": None}
     try:
+        # Detecta VM
         try:
             product_name = open("/sys/class/dmi/id/product_name").read().strip()
             if any(x in product_name for x in ["VMware", "VirtualBox", "KVM", "QEMU"]):
@@ -67,9 +66,7 @@ def produce_hardware_info():
         uuid_output = subprocess.check_output(["dmidecode", "-s", "system-uuid"]).decode().strip()
         mac_output = subprocess.check_output(["cat", "/sys/class/net/eth0/address"]).decode().strip()
 
-        uuid_clean = uuid_output.replace("-", "")
         mac_clean = mac_output.replace(":", "").upper()
-
         hardware_key = f"{uuid_output}_{mac_clean}"
 
         info.update({
@@ -77,7 +74,6 @@ def produce_hardware_info():
             "mac": mac_clean,
             "hardware_id": hardware_key
         })
-
     except Exception as e:
         info["erro"] = str(e)
     return info
@@ -92,9 +88,7 @@ def normalize_mac(mac: str | None) -> str | None:
         return None
     mac = mac.strip()
     pairs = re.findall(r'[0-9A-Fa-f]{2}', mac)
-    if len(pairs) == 12:
-        pass
-    if not pairs or len(''.join(pairs)) < 12:
+    if len(pairs) != 6:
         m = re.search(r'([0-9A-Fa-f]{12})', mac)
         if m:
             s = m.group(1)
@@ -118,47 +112,79 @@ def parse_installer_key(installer_key: str):
     return cpu_serial, mac
 
 def compute_hardware_hash(uuid, mac):
-    """
-    Gera hash SHA256 da chave de licença.
-    Para VM: recebe UUID e MAC fornecidos pelo usuário (formato UUID_MAC).
-    Para hardware físico: recebe UUID e MAC da máquina.
-    """
+    """Gera hash SHA256 da chave de licença."""
     if not uuid or not mac:
         return None
-
     combined = f"UUID:{uuid}|MAC:{mac}"
     return hashlib.sha256(combined.encode("utf-8")).hexdigest().upper()
 
-# ---- Novo helper para status ----
+# ------------------
+# Validação da licença
+# ------------------
 def get_license_status():
-    """Lê status e validade do arquivo .lic.json, se existir."""
+    """Lê status e validade do arquivo .lic.json"""
     data = load_hardware_file()
     status = data.get("status", "Desconhecido")
     valid_until = data.get("valid_until", None)
     return status, valid_until
 
+def validate_license():
+    """Valida a licença atual"""
+    data = load_hardware_file()
+    status = data.get("status", "Desconhecido")
+    valid_until = data.get("valid_until", None)
+    now = datetime.utcnow()
+    valid = False
+    message = ""
+    expires_at = None
+    tolerance_days = 10
 
-def ensure_lic_dir():
-    """Garante que o diretório e o arquivo de licença existam."""
-    if not os.path.exists(LIC_DIR):
-        os.makedirs(LIC_DIR, exist_ok=True)
-    if not os.path.exists(LIC_FILE):
-        with open(LIC_FILE, "w") as f:
-            json.dump({}, f)
+    valid_until_dt = None
+    if valid_until:
+        try:
+            valid_until_dt = datetime.strptime(valid_until, "%Y-%m-%d")
+        except Exception:
+            valid_until_dt = None
 
+    if status == "ativo":
+        if valid_until_dt and now <= valid_until_dt:
+            valid = True
+            message = "Licença válida"
+        elif valid_until_dt and now <= (valid_until_dt + timedelta(days=tolerance_days)):
+            valid = True
+            expires_at = valid_until_dt + timedelta(days=tolerance_days)
+            message = f"Licença vencida em {valid_until_dt.date()}. Sistema disponível até {expires_at.date()}"
+        else:
+            valid = False
+            message = f"Licença vencida em {valid_until_dt.date() if valid_until_dt else 'desconhecida'}. Sistema bloqueado"
+    elif status == "pendente":
+        valid = True
+        message = "Licença pendente de validação. Possível problema de conexão"
+    elif status == "bloqueado":
+        valid = False
+        message = "Licença bloqueada pelo gerenciamento. Sistema bloqueado"
+    else:
+        valid = True
+        message = "Problema ao verificar licença. Possível falha de conexão"
 
-def load_license_status():
-    """Carrega o status salvo da licença."""
-    ensure_lic_dir()
-    try:
-        with open(LIC_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    return {"valid": valid, "message": message, "expires_at": expires_at}
 
+# ------------------
+# Protected config data (para app.py)
+# ------------------
+def get_protected_config_data():
+    """Retorna dados essenciais para o app baseado na licença"""
+    license_info = validate_license()
+    if license_info["valid"]:
+        blueprints_permitidos = ["main", "auth", "nanosip", "rede", "rotas", "relatorios"]
+        status = "ok"
+    else:
+        blueprints_permitidos = ["main", "auth"]
+        status = "error"
 
-def save_license_status(data):
-    """Salva o status atual da licença no arquivo oculto."""
-    ensure_lic_dir()
-    with open(LIC_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    return {
+        "status": status,
+        "message": license_info["message"],
+        "blueprints_permitidos": blueprints_permitidos
+    }
+

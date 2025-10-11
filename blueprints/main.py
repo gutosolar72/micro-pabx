@@ -10,9 +10,14 @@ import licenca as lic  # módulo de funções de licença
 main_bp = Blueprint('main', __name__)
 
 def license_context():
-    """Retorna True se a licença estiver ativa."""
-    status, _ = lic.get_license_status()
-    return status == "ativo"
+    """Retorna True se a licença estiver ativa (pode usar o sistema)."""
+    info = lic.validate_license()
+    return info["valid"]
+
+def license_message():
+    """Retorna a mensagem de status da licença para exibir no HTML."""
+    info = lic.validate_license()
+    return info["message"]
 
 # ---------- Rotas ----------
 @main_bp.route("/")
@@ -21,7 +26,8 @@ def index():
     return render_template(
         "index.html",
         info=info,
-        LICENSE_VALID=license_context()
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
     )
 
 @main_bp.route("/licenca", methods=["GET", "POST"])
@@ -37,6 +43,7 @@ def licenca_status():
     status, validade = lic.get_license_status()
 
     license_status = status or "--"
+    license_info = lic.validate_license()  # <-- valida licença e pega mensagem
 
     if request.method == "POST":
         # --- Checar status na API ---
@@ -72,9 +79,9 @@ def licenca_status():
                     )
                     flash(f"Status da licença atualizado: {status_api}", "success")
                 else:
-                    flash(f"Falha ao consultar licença ({response.status_code}).", "warning")
+                    flash(f"Falha ao consultar licença! Verifique sua conexão de internet.", "warning")
             except Exception as e:
-                flash(f"Erro ao consultar licença: {e}", "danger")
+                flash(f"Falha ao consultar licença! Verifique sua conexão de internet.", "warning")
             return redirect(url_for("main.licenca_status"))
 
         # --- Salvar nova chave (VM) ---
@@ -119,10 +126,9 @@ def licenca_status():
             if response.status_code in (200, 201):
                 flash("Licença enviada com sucesso para o gerenciamento.", "info")
             else:
-                flash(f"Falha ao enviar licença para o gerenciamento ({response.status_code}).", "warning")
-                flash(f"Erro ao enviar licença: {payload}", "warning")
+                flash(f"Falha ao validar licença. Verifique a chave ou entre em contato com o suporte", "warning")
         except Exception as e:
-            flash(f"Erro ao enviar licença: {str(e)}", "warning")
+            flash(f"Falha ao validar licença. Verifique a chave ou entre em contato com o suporte", "warning")
 
         return redirect(url_for("main.licenca_status"))
 
@@ -131,12 +137,14 @@ def licenca_status():
         status={
             "hardware_id": hardware_id,
             "status": license_status,
-            "validade": validade
+            "validade": validade,
+            "msg": license_info["message"]
         },
         is_vm=is_vm,
         cpu_serial=cpu_serial,
         mac=mac,
-        LICENSE_VALID=license_context()
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
     )
 
 @main_bp.route("/reload", methods=["POST"])
