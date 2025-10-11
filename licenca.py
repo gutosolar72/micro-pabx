@@ -214,7 +214,7 @@ def control_asterisk(action: str):
 
     # Executa a ação
     try:
-        subprocess.run(["sudo", "/usr/bin/systemctl", action, "asterisk"], check=True)
+        subprocess.run(["sudo", "-n", "/usr/bin/systemctl", action, "asterisk"], check=True)
         return True, f"Asterisk {action}ado com sucesso."
     except Exception as e:
         return False, f"Erro ao {action} o Asterisk: {str(e)}"
