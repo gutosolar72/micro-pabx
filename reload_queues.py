@@ -52,13 +52,10 @@ def generate_queues_conf():
                 conf_parts.append("strategy=ringall")
                 conf_parts.append("timeout=20")
                 conf_parts.append("retry=5")
-                conf_parts.append("maxlen=1")
+                conf_parts.append("maxlen=0")
+                conf_parts.append("leavewhenempty=no")
                 conf_parts.append("joinempty=yes")
                 conf_parts.append(f"context=interno")
-                conf_parts.append("periodic-announce-frequency=30")
-                conf_parts.append("announce-position=yes")
-                conf_parts.append("announce-holdtime=yes")
-                conf_parts.append('queue-thankyou="queue-thankyou"')
 
                 # CORREÇÃO: Passando o ID da fila para a função
                 ramais_membros = get_ramais_in_fila(fila_id)
