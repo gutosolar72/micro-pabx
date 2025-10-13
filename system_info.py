@@ -25,7 +25,7 @@ def get_system_info():
     try:
         # CORREÇÃO: Adicionado 'sudo' para permitir a comunicação com o Asterisk.
         # O comando foi simplificado para ser mais legível e robusto.
-        command = ["sudo", "asterisk", "-rx", "sip show peers"]
+        command = ["asterisk", "-rx", "sip show peers"]
         peers_output = subprocess.check_output(command, text=True, stderr=subprocess.PIPE)
         
         # Processa a saída para contar os ramais

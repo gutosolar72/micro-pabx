@@ -29,7 +29,7 @@ def gerar_sip_conf():
             f.write(f"localnet={net['localnet']}\n")
 
         f.write("\n")
-        f.write("#include sip_custom.conf")
+        f.write("#include \"sip_custom.conf\"")
         f.write("\n")
 
         # Ramais
@@ -45,10 +45,6 @@ def gerar_sip_conf():
             f.write("nat=no\n")
             f.write("qualify=yes\n\n")
 
-def reload_sip():
-    gerar_sip_conf()
-    subprocess.run(["asterisk", "-rx", "sip reload"])
-
 if __name__ == "__main__":
-    reload_sip()
+    gerar_sip_conf()
 

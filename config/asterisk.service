@@ -1,0 +1,12 @@
+[Service]
+Type=forking
+User=root
+Group=root
+#ExecStart=/usr/sbin/asterisk -q -U asterisk -G asterisk
+ExecStart=/usr/sbin/asterisk -q
+ExecStop=/usr/sbin/asterisk -rx 'core stop now'
+PIDFile=/var/run/asterisk/asterisk.pid
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

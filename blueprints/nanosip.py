@@ -2,6 +2,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from auth import login_required
 from database import get_ramais, get_filas, get_localnets, get_db
+from .main import license_context, license_message
+
 
 from cadastro import (
     adicionar_ramal, atualizar_ramal, remover_ramal,
@@ -17,7 +19,14 @@ def config_nanosip():
     ramais = get_ramais()
     filas = get_filas()
     localnets = get_localnets()
-    return render_template("config_nanosip.html", ramais=ramais, filas=filas, localnets=localnets)
+    return render_template(
+        "config_nanosip.html", 
+        ramais=ramais, 
+        filas=filas, 
+        localnets=localnets,
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
+        )
 
 # --- ROTAS DE RAMAL (Lógica de Edição Final) ---
 @nanosip_bp.route("/ramal", methods=["GET", "POST"])
@@ -46,7 +55,12 @@ def cadastro_ramal():
         return redirect(url_for("nanosip.cadastro_ramal"))
 
     ramais = get_ramais()
-    return render_template("config_ramais.html", ramais=ramais)
+    return render_template(
+        "config_ramais.html", 
+        ramais=ramais,
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
+        )
 
 @nanosip_bp.route("/ramal/excluir", methods=["POST"])
 @login_required
@@ -104,7 +118,13 @@ def cadastro_fila():
     # Para requisições GET
     ramais = get_ramais()
     filas = get_filas()
-    return render_template("config_filas.html", ramais=ramais, filas=filas)
+    return render_template(
+        "config_filas.html",
+        ramais=ramais, 
+        filas=filas,
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
+        )
 
 @nanosip_bp.route("/fila/excluir", methods=["POST"])
 @login_required

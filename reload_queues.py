@@ -81,8 +81,6 @@ def generate_queues_conf():
     except Exception as e:
         print(f"Ocorreu um erro durante a geração do queues.conf: {e}")
 
-
-# --- Ponto de Entrada do Script ---
 if __name__ == "__main__":
     generate_queues_conf()
 

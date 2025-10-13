@@ -11,6 +11,9 @@
                 <th>Duração (s)</th>
                 <th>Falado (s)</th>
                 <th>Status</th>
+                {% if has_record %}
+                <th>Gravação</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
@@ -25,10 +28,19 @@
                     {% if r.disposition == 'Atendida' %}blue
                     {% elif r.disposition == 'Ocupado' %}red
                     {% else %}black
-                    {% endif %}
-               ">
-                   {{ r.disposition }}
+                    {% endif %}">{{ r.disposition }}
                </td>
+               {% if has_record %}
+               <td>
+                   {% if r.recording %}
+                   <a href="#" data-bs-toggle="modal" data-bs-target="#audioModal" data-src="{{ r.recording }}">
+                       <i class="fas fa-play-circle" style="color:green; cursor:pointer;"></i>
+                   </a>
+                   {% else %}
+                       -
+                   {% endif %}
+               </td>
+               {% endif %}
             </tr>
             {% endfor %}
         </tbody>
@@ -45,5 +57,33 @@
         </ul>
     </nav>
 </div>
+
+{% if has_record %}
+<!-- Modal para reprodução de gravação -->
+<div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-3">
+      <h5>Reprodução da Gravação</h5>
+      <audio id="audioPlayer" controls style="width:100%;">
+        <source src="" type="audio/wav">
+        Seu navegador não suporta áudio.
+      </audio>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var audioModal = document.getElementById('audioModal')
+  audioModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget
+    var src = button.getAttribute('data-src')
+    var player = document.getElementById('audioPlayer')
+    player.querySelector('source').src = src
+    player.load()
+  })
+})
+</script>
+{% endif %}
 {% endblock %}
 

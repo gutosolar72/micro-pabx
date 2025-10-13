@@ -1,6 +1,6 @@
 /var/log/asterisk/cdr-csv/Master.csv {
-    weekly
-    rotate 4
+    daily
+    rotate 7
     missingok
     notifempty
     copytruncate

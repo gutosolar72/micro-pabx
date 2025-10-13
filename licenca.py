@@ -4,7 +4,8 @@ import subprocess
 import hashlib
 import json
 import os
-from datetime import datetime, timedelta
+import requests
+from datetime import datetime, timedelta, timezone
 
 # Caminhos fixos e ocultos
 BASE_DIR = "/opt/nanosip"
@@ -128,51 +129,64 @@ def get_license_status():
     valid_until = data.get("valid_until", None)
     return status, valid_until
 
+from datetime import datetime, timedelta, timezone
+
+from datetime import datetime, timedelta, timezone
+
 def validate_license():
     """Valida a licença atual"""
     data = load_hardware_file()
     status = data.get("status", "Desconhecido")
     valid_until = data.get("valid_until", None)
-    now = datetime.utcnow()
+
+    # Timezone do Brasil (UTC-3)
+    BR_TZ = timezone(timedelta(hours=-3))
+    now = datetime.now(BR_TZ)
+    valid_until_dt = None
     valid = False
     message = ""
     expires_at = None
     tolerance_days = 10
 
-    valid_until_dt = None
+    # Converter data de validade com timezone
     if valid_until:
         try:
-            valid_until_dt = datetime.strptime(valid_until, "%Y-%m-%d")
+            valid_until_dt = datetime.strptime(valid_until, "%Y-%m-%d").replace(tzinfo=BR_TZ)
         except Exception:
             valid_until_dt = None
 
+    # Lógica de validação
     if status == "ativo":
         if valid_until_dt and now <= valid_until_dt:
             valid = True
             control_asterisk("start")
-            message = "Licença válida"
+            message = f"Licença válida até {valid_until_dt.date()}"
         elif valid_until_dt and now <= (valid_until_dt + timedelta(days=tolerance_days)):
             valid = True
-            control_asterisk("stop")
+            control_asterisk("start")
             expires_at = valid_until_dt + timedelta(days=tolerance_days)
-            message = f"Licença vencida em {valid_until_dt.date()}. Sistema disponível até {expires_at.date()}"
+            message = f"Licença vencida em {valid_until_dt.date()}. Sistema disponível até {expires_at.date()} (período de tolerância)"
         else:
             valid = False
             control_asterisk("stop")
-            message = f"Licença vencida em {valid_until_dt.date() if valid_until_dt else 'desconhecida'}. Sistema bloqueado"
+            message = f"Licença vencida em {valid_until_dt.date() if valid_until_dt else 'desconhecida'}. Sistema bloqueado."
     elif status == "pendente":
         valid = True
         control_asterisk("stop")
-        message = "Licença pendente de validação. Possível problema de conexão"
+        message = "Licença pendente de validação. Possível problema de conexão."
     elif status == "bloqueado":
         valid = False
         control_asterisk("stop")
-        message = "Licença bloqueada pelo gerenciamento. Sistema bloqueado"
+        message = "Licença bloqueada pelo gerenciamento. Sistema bloqueado."
     else:
         valid = True
-        message = "Problema ao verificar licença. Possível falha de conexão"
+        message = "Problema ao verificar licença. Possível falha de conexão."
 
-    return {"valid": valid, "message": message, "expires_at": expires_at}
+    return {
+        "valid": valid,
+        "message": message,
+        "expires_at": expires_at
+    }
 
 # ------------------
 # Protected config data (para app.py)
@@ -194,6 +208,7 @@ def get_protected_config_data():
     }
 
 def control_asterisk(action: str):
+    #return True, f"Simulação: Asterisk não será {action}ado."
     """
     Controla o serviço Asterisk.
     action: 'start' ou 'stop'
@@ -214,11 +229,165 @@ def control_asterisk(action: str):
 
     # Executa a ação
     try:
-        subprocess.run(["sudo", "-n", "/usr/bin/systemctl", action, "asterisk"], check=True)
+        subprocess.run(["/usr/bin/systemctl", action, "asterisk"], check=True)
         return True, f"Asterisk {action}ado com sucesso."
     except Exception as e:
         return False, f"Erro ao {action} o Asterisk: {str(e)}"
-  
 
+def load_licenca_data():
+    """Lê o conteúdo do arquivo .lic e retorna os dados como dicionário."""
+    if not os.path.exists(LIC_FILE):
+        return {}
+    try:
+        with open(LIC_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_hardware_file(hardware_id, cpu_serial, mac, status, valid_until, modulos_override=None):
+    """Salva os dados da licença no arquivo local .lic."""
+    data = {
+        "hardware_id": hardware_id,
+        "cpu_serial": cpu_serial,
+        "mac": mac,
+        "status": status,
+        "valid_until": valid_until,
+        "modulos_override": modulos_override or "",
+    }
+    with open(LIC_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def load_licenca_data():
+    """Lê o conteúdo do arquivo .lic e retorna os dados como dicionário."""
+    if not os.path.exists(LIC_FILE):
+        return {}
+    try:
+        with open(LIC_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_hardware_file(hardware_id, cpu_serial, mac, status, valid_until, modulos_override=None):
+    """Salva os dados da licença no arquivo local .lic."""
+    data = {
+        "hardware_id": hardware_id,
+        "cpu_serial": cpu_serial,
+        "mac": mac,
+        "status": status,
+        "valid_until": valid_until,
+        "modulos_override": modulos_override or "",
+    }
+    with open(LIC_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+# --- Função principal que consulta o servidor remoto e atualiza o .lic ---
+
+def atualizar_licenca_remota():
+    """Consulta o status da licença no servidor e atualiza o arquivo local."""
+    try:
+        info = produce_hardware_info()
+        lic_data = load_licenca_data()
+
+        hardware_id = lic_data.get("hardware_id")
+        cpu_serial = lic_data.get("cpu_serial")
+        mac = lic_data.get("mac")
+        is_vm = info.get("is_vm", False)
+
+        if not hardware_id or not cpu_serial or not mac:
+            return False, "Nenhuma licença cadastrada para consultar."
+
+        produto = "nanosip_vm" if is_vm else "nanosip_rasp"
+        payload = {
+            "uuid": cpu_serial,
+            "mac": mac,
+            "chave_licenca": hardware_id,
+            "produto": produto
+        }
+
+        response = requests.post(
+            "https://gerenciamento.bar7cordas.com.br/api/ativar_licenca",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+
+        if response.status_code in (200, 201):
+            data = response.json()
+            status_api = data.get("status", "desconhecido")
+            validade = data.get("valid_until", "N/A")
+            modulos_override = data.get("modulos_override", "N/A")
+
+            save_hardware_file(
+                hardware_id=hardware_id,
+                cpu_serial=cpu_serial,
+                mac=mac,
+                status=status_api,
+                valid_until=validade,
+                modulos_override=modulos_override
+            )
+            return True, f"Status da licença atualizado: {status_api}"
+        else:
+            return False, "Falha ao consultar licença. Verifique sua conexão."
+
+    except Exception as e:
+        return False, f"Erro ao consultar licença: {str(e)}"
+
+def get_modulos_override():
+    lic_data = load_licenca_data()
+    return lic_data.get("modulos_override")
+  
+#def atualizar_licenca_remota():
+#    """Consulta o status da licença no servidor e atualiza o arquivo local."""
+#    try:
+#        info = produce_hardware_info()
+#        lic_data = load_hardware_file()
+#
+#        hardware_id = lic_data.get("hardware_id")
+#        cpu_serial = lic_data.get("cpu_serial")
+#        mac = lic_data.get("mac")
+#        is_vm = info.get("is_vm", False)
+#
+#        if not hardware_id or not cpu_serial or not mac:
+#            return False, "Nenhuma licença cadastrada para consultar."
+#
+#        produto = "nanosip_vm" if is_vm else "nanosip_rasp"
+#        payload = {
+#            "uuid": cpu_serial,
+#            "mac": mac,
+#            "chave_licenca": hardware_id,
+#            "produto": produto
+#        }
+#
+#        response = requests.post(
+#            "https://gerenciamento.bar7cordas.com.br/api/ativar_licenca",
+#            json=payload,
+#            headers={"Content-Type": "application/json"},
+#            timeout=10
+#        )
+#
+#        if response.status_code in (200, 201):
+#            data = response.json()
+#            status_api = data.get("status", "desconhecido")
+#            validade = data.get("valid_until", "N/A")
+#            modulos_override = data.get("modulos_override", "N/A")
+#
+#            save_hardware_file(
+#                hardware_id=hardware_id,
+#                cpu_serial=cpu_serial,
+#                mac=mac,
+#                status=status_api,
+#                valid_until=validade,
+#                modulos_override=modulos_override
+#            )
+#            return True, f"Status da licença atualizado: {status_api}"
+#        else:
+#            return False, "Falha ao consultar licença. Verifique sua conexão."
+#    except Exception as e:
+#        return False, f"Erro ao consultar licença: {str(e)}"
+#
     
     

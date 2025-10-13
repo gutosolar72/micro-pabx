@@ -21,7 +21,7 @@ case $ACTION in
         echo "[3/4] Gerando ramais (sip.conf)..." >&2
         $PYTHON_EXEC "${BASE_DIR}/reload_sip.py"
 
-        echo "[4/4] Recarregando Asterisk..." >&2
+        echo "[4/4] Recarregando o Asterisk..." >&2
         /usr/sbin/asterisk -rx "core reload" > /dev/null 2>&1
         ;;
 

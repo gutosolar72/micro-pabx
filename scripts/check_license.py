@@ -5,12 +5,13 @@ import os
 import sys
 from datetime import datetime
 import requests
+import subprocess
 
 # Adicionar o caminho do projeto
 sys.path.append("/opt/nanosip")
 import licenca as lic
 
-LOG_FILE = "/var/log/nanosip_licence.log"
+LOG_FILE = "/var/log/nanosip/nanosip_license.log"
 
 
 def log(msg):
@@ -66,7 +67,6 @@ def check_license_remote():
         log(f"⚠️ Erro ao consultar licença: {e}")
         return False
 
-
 def main():
     """Fluxo principal do verificador automático."""
     log("🔍 Iniciando verificação automática da licença...")
@@ -82,11 +82,18 @@ def main():
     success, msg = lic.control_asterisk(action)
     log(f"Asterisk: {msg}")
 
+    # --- Chamando o system_manager.sh ---
+    try:
+        sh_path = "/opt/nanosip/system_manager.sh"
+        result = subprocess.run([sh_path, "apply_config"], capture_output=True, text=True, check=True)
+        log(f"system_manager.sh executado com sucesso:\n{result.stdout}")
+    except subprocess.CalledProcessError as e:
+        log(f"❌ Erro ao executar system_manager.sh:\n{e.stderr}")
+
     if updated:
         log("✔️ Verificação concluída com sucesso.\n")
     else:
         log("❌ Verificação falhou. Verifique conectividade.\n")
-
 
 if __name__ == "__main__":
     main()

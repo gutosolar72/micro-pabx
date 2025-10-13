@@ -136,13 +136,23 @@ make config
 check_and_repair_python
 
 echo "################# Configurando permissões e serviço do Asterisk ########################"
-sed -i 's/;runuser = asterisk/runuser = asterisk/' /etc/asterisk/asterisk.conf
-sed -i 's/;rungroup = asterisk/rungroup = asterisk/' /etc/asterisk/asterisk.conf
+#sed -i 's/;runuser = asterisk/runuser = asterisk/' /etc/asterisk/asterisk.conf
+#sed -i 's/;rungroup = asterisk/rungroup = asterisk/' /etc/asterisk/asterisk.conf
 chown -R asterisk:asterisk /var/log/asterisk /var/spool/asterisk /var/lib/asterisk /etc/asterisk
+
+ln -s /opt/nanosip/config/asterisk.service /etc/systemd/system/asterisk.service
+mkdir -p /var/run/asterisk
+chown asterisk:asterisk /var/run/asterisk
+sed -i 's/^usegmtime=yes/usegmtime=no/' /etc/asterisk/cdr.conf
 
 # Desabilitando modulos desnecessarios do asterisk
 sed -i 's/noload = chan_sip.so/;noload = chan_sip.so/' /etc/asterisk/modules.conf
 cat /opt/nanosip/config/asterisk_modules >> /etc/asterisk/modules.conf
+mkdir -p /etc/asterisk/sip_custom.conf
+mkdir -p /etc/asterisk/extensions_custom.conf
+chown asterisk:asterisk /etc/asterisk/sip_custom.conf
+chown  asterisk:asterisk /etc/asterisk/extensions_custom.conf
+
 
 systemctl daemon-reload
 systemctl enable asterisk
@@ -200,6 +210,8 @@ EOF
 visudo -c -f /etc/sudoers.d/nanosip_sudoers
 chmod 440 /etc/sudoers.d/nanosip_sudoers
 chown root:root /etc/sudoers.d/nanosip_sudoers
+ln -s /opt/nanosip/config/nanosip_cron /etc/cron.d/nanosip
+chmod 644 /etc/cron.d/nanosip
 
 # Ajustando o hosts para não dar pau no sudo
 HOSTNAME=$(hostname)

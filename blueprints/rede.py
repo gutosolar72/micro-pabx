@@ -100,6 +100,7 @@ def carrega_config_atual():
 @rede_bp.route("/rede", methods=["GET", "POST"])
 @login_required
 def config_rede():
+    from .main import license_context, license_message
     if request.method == "POST":
         try:
             # 1. Coleta os dados do formulário
@@ -160,5 +161,11 @@ iface {iface} inet static
     # Para requisições GET
     network = carrega_config_atual()
     localnets = get_localnets()
-    return render_template("config_rede.html", network=network, localnets=localnets)
+    return render_template(
+        "config_rede.html", 
+        network=network, 
+        localnets=localnets,
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
+        )
 

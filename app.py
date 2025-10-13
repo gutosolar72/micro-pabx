@@ -8,7 +8,7 @@ from blueprints.nanosip import nanosip_bp
 from blueprints.rede import rede_bp
 from blueprints.rotas import rotas_bp
 #from blueprints.rotas import usuarios_bp
-#from blueprints.relatorios import relatorios_bp
+from blueprints.relatorios import relatorios_bp
 
 import licenca
 
@@ -34,16 +34,23 @@ BLUEPRINT_MAP = {
     "auth": auth_bp,
     "nanosip": nanosip_bp,
     "rede": rede_bp,
+    "relatorios": relatorios_bp,
     "rotas": rotas_bp
 }
 
-for bp_name in BLUEPRINTS_PERMITIDOS:
-    bp = BLUEPRINT_MAP.get(bp_name)
-    if bp:
-        if bp_name in ["nanosip", "rede", "rotas"]:
-            app.register_blueprint(bp, url_prefix='/config')
-        else:
-            app.register_blueprint(bp)
+for bp_name, bp in BLUEPRINT_MAP.items():
+    if bp_name in ["nanosip", "rede", "rotas"]:
+        app.register_blueprint(bp, url_prefix='/config')
+    else:
+        app.register_blueprint(bp)
+
+#for bp_name in BLUEPRINTS_PERMITIDOS:
+#    bp = BLUEPRINT_MAP.get(bp_name)
+#    if bp:
+#        if bp_name in ["nanosip", "rede", "rotas"]:
+#            app.register_blueprint(bp, url_prefix='/config')
+#        else:
+#            app.register_blueprint(bp)
 
 # -------------------------------
 # Context processor para base.html
@@ -55,12 +62,17 @@ def inject_license_status():
 # -------------------------------
 # Before request (checa licença)
 # -------------------------------
+#@app.before_request
+#def check_license_status():
+#    if not LICENSE_VALID:
+#        if request.endpoint and not any(request.endpoint.startswith(bp) for bp in ["main", "auth"]):
+#            flash(LICENSE_MESSAGE, "danger")
+#            return redirect(url_for("main.index"))
+
 @app.before_request
 def check_license_status():
-    if not LICENSE_VALID:
-        if request.endpoint and not any(request.endpoint.startswith(bp) for bp in ["main", "auth"]):
-            flash(LICENSE_MESSAGE, "danger")
-            return redirect(url_for("main.index"))
+    if not LICENSE_VALID and request.endpoint:
+        flash(LICENSE_MESSAGE, "danger")
 
 # -------------------------------
 # Inicialização do app

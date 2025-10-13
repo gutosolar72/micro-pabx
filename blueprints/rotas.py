@@ -4,16 +4,13 @@ from auth import login_required
 from database import get_db, get_routes, get_filas
 from functools import wraps
 from datetime import datetime
+from .main import license_message,license_context
 import bcrypt
 import licenca as lic  # <-- importar módulo de licença
 import math
 import csv
 
 rotas_bp = Blueprint("rotas", __name__, template_folder="../templates")
-
-def license_context():
-    status, _ = lic.get_license_status()
-    return status == "ativo"
 
 
 # --- Decorador de permissões ---
@@ -110,7 +107,8 @@ def config_rotas():
         "config_rotas.html",
         rotas=rotas,
         filas=filas,
-        LICENSE_VALID=license_context()
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
     )
 
 @rotas_bp.route("/rotas/excluir", methods=["POST"])
@@ -147,7 +145,12 @@ def listar_usuarios():
     db = get_db()
     users = db.execute("SELECT * FROM users").fetchall()
     db.close()
-    return render_template("usuarios.html", users=users, LICENSE_VALID=license_context())
+    return render_template(
+    "usuarios.html", 
+    users=users, 
+    LICENSE_VALID=license_context(),
+    LICENSE_MSG=license_message()
+    )
 
 @rotas_bp.route("/usuarios/criar", methods=["GET", "POST"])
 @login_required
@@ -168,7 +171,11 @@ def criar_usuario():
         db.close()
         flash("Usuário criado com sucesso!", "success")
         return redirect(url_for("rotas.listar_usuarios"))
-    return render_template("criar_usuario.html", LICENSE_VALID=license_context())
+    return render_template(
+        "criar_usuario.html", 
+        LICENSE_VALID=license_context(),
+        LICENSE_MSG=license_message()
+        )
 
 @rotas_bp.route("/usuarios/editar/<int:id>", methods=["GET", "POST"])
 @login_required
@@ -211,45 +218,3 @@ def excluir_usuario(id):
     return redirect(url_for("rotas.listar_usuarios"))
 
 
-@rotas_bp.route("/relatorios")
-@login_required
-@requires_role("admin", "gerente", "operador")
-def relatorio_cdr():
-    # Caminho do CSV
-    csv_path = "/var/log/asterisk/cdr-csv/Master.csv"
-
-    registros = []
-
-    # Ler CSV
-    try:
-        with open(csv_path, newline='', encoding='utf-8') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                # Normaliza os nomes das colunas caso necessário
-                registros.append({
-                    'calldate': row.get('calldate', ''),
-                    'src': row.get('src', ''),
-                    'dst': row.get('dst', ''),
-                    'duration': row.get('duration', ''),
-                    'billsec': row.get('billsec', ''),
-                    'disposition': row.get('disposition', ''),
-                })
-    except Exception as e:
-        registros = []
-        flash(f"Erro ao ler o CSV de CDR: {e}", "danger")
-
-    # --- Paginação ---
-    per_page = 20  # registros por página
-    page = request.args.get('page', 1, type=int)
-    total_pages = math.ceil(len(registros) / per_page)
-    start = (page - 1) * per_page
-    end = start + per_page
-    registros_pag = registros[start:end]
-
-    return render_template(
-        "relatorio_cdr.html",
-        registros=registros_pag,
-        page=page,
-        total_pages=total_pages,
-        LICENSE_VALID=license_context()
-    )

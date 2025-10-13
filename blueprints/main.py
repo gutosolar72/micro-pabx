@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 import subprocess
 import requests
 import json
@@ -47,42 +47,9 @@ def licenca_status():
     license_info = lic.validate_license()  # <-- valida licença e pega mensagem
 
     if request.method == "POST":
-        # --- Checar status na API ---
         if request.form.get("check_status"):
-            if not hardware_id:
-                flash("Nenhuma licença cadastrada para consultar.", "warning")
-                return redirect(url_for("main.licenca_status"))
-            try:
-                produto = "nanosip_vm" if is_vm else "nanosip_rasp"
-                payload = {
-                    "uuid": cpu_serial,
-                    "mac": mac,
-                    "chave_licenca": hardware_id,
-                    "produto": produto
-                }
-                response = requests.post(
-                    "https://gerenciamento.bar7cordas.com.br/api/ativar_licenca",
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=10
-                )
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    status_api = data.get("status", "desconhecido")
-                    validade = data.get("valid_until", "N/A")
-
-                    lic.save_hardware_file(
-                        hardware_id=hardware_id,
-                        cpu_serial=cpu_serial,
-                        mac=mac,
-                        status=status_api,
-                        valid_until=validade
-                    )
-                    flash(f"Status da licença atualizado: {status_api}", "success")
-                else:
-                    flash(f"Falha ao consultar licença! Verifique sua conexão de internet.", "warning")
-            except Exception as e:
-                flash(f"Falha ao consultar licença! Verifique sua conexão de internet.", "warning")
+            ok, msg = lic.atualizar_licenca_remota()
+            flash(msg, "success" if ok else "warning")
             return redirect(url_for("main.licenca_status"))
 
         # --- Salvar nova chave (VM) ---
@@ -152,9 +119,9 @@ def licenca_status():
 @login_required
 def reload():
     try:
-        subprocess.run(["sudo", "systemctl", "start", "nanosip-admin@apply_config.service"], check=True)
-        flash("Tarefa de aplicar configurações iniciada com sucesso!", "success")
+        subprocess.run(["/usr/bin/systemctl", "start", "nanosip-admin@apply_config.service"], check=True)
+        session["msg_apply"] = "Configurações aplicadas com sucesso!"
     except Exception as e:
-        flash(f"Erro ao iniciar tarefa de reload: {str(e)}", "danger")
+        session["msg_apply"] = f"Erro ao aplicar configurações: {e}"
     return redirect(url_for("main.index"))
 

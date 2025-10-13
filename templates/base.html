@@ -100,7 +100,7 @@
 <body>
     <header>
         <h1>nano<i><span>SIP</span></i></h1>
-        {% if LICENSE_VALID and session.get('role') in ['admin'] %}
+        {% if session.get('role') in ['admin'] %}
             <form action="{{ url_for('main.reload') }}" method="POST" style="display: inline;">
                 <button type="submit">Aplicar Configurações</button>
             </form>
@@ -110,7 +110,6 @@
     <nav>
         <a href="{{ url_for('main.index') }}">Status</a>
         <a href="{{ url_for('main.licenca_status') }}">Licença</a>
-        {% if LICENSE_VALID %}
             {% if session.get('role') in ['admin'] %}
                 <a href="{{ url_for('nanosip.config_nanosip') }}">Configuração</a>
             {% endif %}
@@ -118,9 +117,8 @@
                 <a href="{{ url_for('rotas.listar_usuarios') }}">Usuários</a>
             {% endif %}
             {% if session.get('role') in ['admin', 'gerente', 'operador'] %}
-                <a href="{{ url_for('rotas.relatorio_cdr') }}">Relatórios</a>
+                <a href="{{ url_for('relatorios.relatorio_cdr') }}">Relatórios</a>
             {% endif %}
-        {% endif %}
         {% if not session.get('user') %}
             <a href="{{ url_for('auth.login') }}">Login</a>
         {% endif %}
@@ -129,34 +127,38 @@
             <a href="{{ url_for('auth.logout') }}">Logout</a>
         {% endif %}
     </nav>
+    {% if session.msg_apply %}
+        <div id="config-msg" class="license-status license-success">
+            {{ session.msg_apply }}
+        </div>
+        {% set _ = session.pop('msg_apply') %}
+    {% endif %}
 
     <div class="container">
         {% if LICENSE_MSG %}
-            <div class="license-status
-                {% if LICENSE_VALID %}license-success{% else %}{% if 'tolerância' in LICENSE_MSG.lower() %}license-warning{% else %}license-danger{% endif %}{% endif %}">
-                {{ LICENSE_MSG }}
-            </div>
+            {% if not LICENSE_VALID or 'vencida' in LICENSE_MSG.lower() %}
+                <div class="license-status
+                    {% if LICENSE_VALID and 'vencida' in LICENSE_MSG.lower() %}license-warning{% else %}license-danger{% endif %}">
+                    {{ LICENSE_MSG }}
+                </div>
+            {% endif %}
         {% endif %}
-
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div style="padding:10px; margin-bottom:10px; border-radius:5px;
-                            {% if category == 'success' %}background-color:#d4edda; color:#155724;
-                            {% elif category == 'danger' %}background-color:#f8d7da; color:#721c24;
-                            {% elif category == 'warning' %}background-color:#fff3cd; color:#856404;
-                            {% elif category == 'info' %}background-color:#cce5ff; color:#004085;
-                            {% endif %}">
-                            {{ message | safe }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
-
-        {% block content %}{% endblock %}
     </div>
+
+    {% block content %}{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const msg = document.getElementById('config-msg');
+        if(msg){
+            setTimeout(() => {
+                msg.style.opacity = '0';
+                setTimeout(() => msg.remove(), 500);
+            }, 3000);
+        }
+    });
+    </script>
 
     <footer>
         <p>NanoSIP - Copyright &copy; 2025 - Todos os direitos reservados.</p>
