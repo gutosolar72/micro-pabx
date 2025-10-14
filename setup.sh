@@ -152,6 +152,7 @@ mkdir -p /etc/asterisk/sip_custom.conf
 mkdir -p /etc/asterisk/extensions_custom.conf
 chown asterisk:asterisk /etc/asterisk/sip_custom.conf
 chown  asterisk:asterisk /etc/asterisk/extensions_custom.conf
+rm /var/lib/asterisk/moh/macroform-robot_dity.wav
 
 
 systemctl daemon-reload
