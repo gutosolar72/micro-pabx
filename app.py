@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, flash, request
+from database import init_db
 import os
 import subprocess
 
@@ -74,9 +75,19 @@ def check_license_status():
     if not LICENSE_VALID and request.endpoint:
         flash(LICENSE_MESSAGE, "danger")
 
+def initialize_database():
+    db_path = "/opt/nanosip/nanosip.db"  # ajuste conforme seu caminho real
+    if not os.path.exists(db_path):
+        print("📀 Banco de dados não encontrado. Criando...")
+        with app.app_context():
+            init_db()
+        print("✅ Banco criado com sucesso.")
+    else:
+        print("📂 Banco já existe. Pulando criação.")
+
 # -------------------------------
 # Inicialização do app
 # -------------------------------
 if __name__ == "__main__":
+    initialize_database()
     app.run(host="0.0.0.0", port=5000, debug=True)
-
