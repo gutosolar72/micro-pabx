@@ -34,86 +34,82 @@ def index():
 @main_bp.route("/licenca", methods=["GET", "POST"])
 @login_required
 def licenca_status():
+    # 1️⃣ Carrega dados da licença, se existir
+    lic_data = lic.load_licenca_data()
     info = lic.produce_hardware_info()
-    lic_data = lic.load_hardware_file()
+    is_vm_detected = info["is_vm"]
 
-    hardware_id = lic_data.get("hardware_id")
-    cpu_serial = lic_data.get("cpu_serial")
-    mac = lic_data.get("mac")
-    is_vm = info.get("is_vm", False)
-    status, validade = lic.get_license_status()
+    cpu_serial = None
+    mac = None
+    hardware_id = None
 
-    license_status = status or "--"
-    license_info = lic.validate_license()  # <-- valida licença e pega mensagem
+    if lic_data:
+        # Licença já existe
+        is_vm = lic_data.get("is_vm", is_vm_detected)
+        cpu_serial = lic_data.get("cpu_serial")
+        mac = lic_data.get("mac")
+        hardware_id = lic_data.get("hardware_id")
+    else:
+        # Sem licença ainda
+        is_vm = is_vm_detected
+        cpu_serial = info.get("uuid")
+        mac = info.get("mac")
+        hardware_id = info.get("hardware_id")
 
+        if not is_vm:
+            # Máquina física → gera arquivo automaticamente
+
+            lic_key = f"{cpu_serial}_{mac}"
+            lic.registrar_chave_licenca(lic_key, is_vm=False)
+
+
+    # 2️⃣ POST
     if request.method == "POST":
         if request.form.get("check_status"):
             ok, msg = lic.atualizar_licenca_remota()
             flash(msg, "success" if ok else "warning")
-            return redirect(url_for("main.licenca_status"))
+        elif is_vm:
+            posted = request.form.get("hardware_key", "").strip()
+            if not posted:
+                flash("Informe a Chave de Ativação.", "danger")
+                return redirect(url_for("main.licenca_status"))
 
-        # --- Salvar nova chave (VM) ---
-        if not is_vm:
+            ok, msg = lic.registrar_chave_licenca(posted_key=posted, is_vm=True)
+            flash(msg, "success" if ok else "danger")
+            return redirect(url_for("main.licenca_status"))
+        else:
             flash("Sistema detectado como hardware físico — gravação manual não permitida.", "warning")
             return redirect(url_for("main.licenca_status"))
 
-        posted = request.form.get("hardware_key", "").strip()
-        if not posted:
-            flash("Informe a Chave de Ativação.", "danger")
-            return redirect(url_for("main.licenca_status"))
+    # 3️⃣ GET → status atual
+    lic_data = lic.load_licenca_data()  # recarrega
+    status, validade = lic.get_license_status()
+    license_info = lic.validate_license()
 
-        cpu_serial, mac = lic.parse_installer_key(posted)
-        if not cpu_serial or not mac:
-            flash("Formato da chave inválido. Use: UUID_MAC (ex.: 4C4C..._00D76D252709).", "danger")
-            return redirect(url_for("main.licenca_status"))
+    # Determina se deve mostrar formulário de chave VM
+    show_vm_form = is_vm and (not lic_data or license_info["valid"] is False)
 
-        hardware_id = lic.compute_hardware_hash(cpu_serial, mac)
-        lic.save_hardware_file(
-            hardware_id=hardware_id,
-            cpu_serial=cpu_serial,
-            mac=mac,
-            status="pendente"
-        )
-
-        flash("Chave de Ativação salva com sucesso. Aguardando validação...", "success")
-
-        try:
-            produto = "nanosip_vm" if is_vm else "nanosip_rasp"
-            payload = {
-                "uuid": cpu_serial,
-                "mac": mac,
-                "chave_licenca": hardware_id,
-                "produto": produto
-            }
-            response = requests.post(
-                "https://gerenciamento.bar7cordas.com.br/api/ativar_licenca",
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=10
-            )
-            if response.status_code in (200, 201):
-                flash("Licença enviada com sucesso para o gerenciamento.", "info")
-            else:
-                flash(f"Falha ao validar licença. Verifique a chave ou entre em contato com o suporte", "warning")
-        except Exception as e:
-            flash(f"Falha ao validar licença. Verifique a chave ou entre em contato com o suporte", "warning")
-
-        return redirect(url_for("main.licenca_status"))
+    # Determina mensagem para hardware físico
+    hardware_msg = None
+    if not is_vm and license_info["valid"]:
+        hardware_msg = "Hardware físio. Licenç gerada automaticamente."
 
     return render_template(
         "licenca.html",
         status={
-            "hardware_id": hardware_id,
-            "status": license_status,
+            "hardware_id": lic_data.get("hardware_id"),
+            "status": status,
             "validade": validade,
-            "msg": license_info["message"]
+            "msg": license_info["message"] if not hardware_msg else hardware_msg
         },
         is_vm=is_vm,
-        cpu_serial=cpu_serial,
-        mac=mac,
-        LICENSE_VALID=license_context(),
-        LICENSE_MSG=license_message()
+        show_vm_form=show_vm_form,
+        cpu_serial=lic_data.get("cpu_serial"),
+        mac=lic_data.get("mac"),
+        LICENSE_VALID=license_info["valid"],
+        LICENSE_MSG=license_info["message"]
     )
+
 
 @main_bp.route("/reload", methods=["POST"])
 @login_required
@@ -124,4 +120,3 @@ def reload():
     except Exception as e:
         session["msg_apply"] = f"Erro ao aplicar configurações: {e}"
     return redirect(url_for("main.index"))
-

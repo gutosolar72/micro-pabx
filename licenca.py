@@ -31,18 +31,22 @@ def load_hardware_file():
             print(f"[licenca] Erro ao ler {LIC_FILE}: {e}")
     return {}
 
-def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, valid_until=None):
-    """Salva o arquivo oculto de licença (.lic.json)"""
+def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, valid_until=None, modulos_override=None):
+    """Salva o arquivo oculto de licença (.lic.json)."""
     ensure_lic_dir()
+
     data = {
         "hardware_id": hardware_id,
         "cpu_serial": cpu_serial,
-        "mac": mac
+        "mac": mac,
     }
-    if status:
+
+    if status is not None:
         data["status"] = status
-    if valid_until:
+    if valid_until is not None:
         data["valid_until"] = valid_until
+    if modulos_override is not None:
+        data["modulos_override"] = modulos_override
 
     try:
         with open(LIC_FILE, "w") as f:
@@ -52,32 +56,135 @@ def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, vali
         print(f"[licenca] Erro ao salvar {LIC_FILE}: {e}")
 
 def produce_hardware_info():
-    """Obtém informações básicas de hardware (UUID e MAC)."""
+    """Obtém informações básicas de hardware (UUID, MAC, is_vm, hardware_id) sem salvar arquivo."""
     info = {"is_vm": False, "uuid": None, "mac": None, "hardware_id": None}
+
+    # ----- Detecta se é VM -----
     try:
-        # Detecta VM
+        with open("/sys/class/dmi/id/product_name") as f:
+            product_name = f.read().strip()
+        if any(x in product_name for x in ["VMware", "VirtualBox", "KVM", "QEMU"]):
+            info["is_vm"] = True
+    except Exception:
+        pass
+    is_vm = info["is_vm"]
+
+    # ----- Detecta UUID / Serial -----
+    uuid_output = None
+    try:
+        uuid_output = subprocess.check_output(
+            ["dmidecode", "-s", "system-uuid"], stderr=subprocess.DEVNULL
+        ).decode().strip()
+        if not uuid_output or uuid_output.startswith("00000000"):
+            uuid_output = None
+    except Exception:
+        pass
+
+    # ----- Fallback Raspberry Pi -----
+    if not uuid_output:
         try:
-            product_name = open("/sys/class/dmi/id/product_name").read().strip()
-            if any(x in product_name for x in ["VMware", "VirtualBox", "KVM", "QEMU"]):
-                info["is_vm"] = True
-                return info
+            path = "/sys/firmware/devicetree/base/serial-number"
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    uuid_output = f.read().replace("\x00", "").strip().upper()
         except Exception:
             pass
 
-        uuid_output = subprocess.check_output(["dmidecode", "-s", "system-uuid"]).decode().strip()
-        mac_output = subprocess.check_output(["cat", "/sys/class/net/eth0/address"]).decode().strip()
+    # ----- Detecta interface de rede e MAC -----
+    iface = None
+    try:
+        route_output = subprocess.check_output(
+            "ip route | grep default | awk '{print $5}'",
+            shell=True
+        ).decode().strip()
+        if route_output:
+            iface = route_output.splitlines()[0]
+    except Exception:
+        pass
 
-        mac_clean = mac_output.replace(":", "").upper()
-        hardware_key = f"{uuid_output}_{mac_clean}"
+    mac_output = None
+    if iface:
+        path = f"/sys/class/net/{iface}/address"
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    mac_output = f.read().strip()
+            except Exception:
+                pass
 
-        info.update({
-            "uuid": uuid_output,
-            "mac": mac_clean,
-            "hardware_id": hardware_key
-        })
-    except Exception as e:
-        info["erro"] = str(e)
+    if not mac_output:
+        for dev in os.listdir("/sys/class/net/"):
+            if dev.startswith(("eth", "enp")):
+                try:
+                    with open(f"/sys/class/net/{dev}/address") as f:
+                        mac_output = f.read().strip()
+                        break
+                except Exception:
+                    continue
+
+    # ----- Normaliza MAC e gera hash -----
+    mac_clean = normalize_mac(mac_output)
+    hardware_hash = compute_hardware_hash(uuid_output, mac_clean) if uuid_output and mac_clean else None
+
+    # ----- Atualiza info -----
+    info.update({
+        "uuid": uuid_output,
+        "mac": mac_clean,
+        "hardware_id": hardware_hash,
+        "is_vm": is_vm
+    })
+
     return info
+
+
+
+def registrar_chave_licenca(posted_key, is_vm=False):
+    posted = (posted_key or "").strip()
+    if not posted:
+        return False, "Chave de licença não informada."
+
+    cpu_serial, mac = parse_installer_key(posted)
+    if not cpu_serial or not mac:
+        return False, "Formato inválido da chave. Use UUID_MAC (ex.: 4C4C..._00D76D252709)."
+
+    hardware_id = compute_hardware_hash(cpu_serial, mac)
+    produto = "nanosip_vm" if is_vm else "nanosip_rasp"
+
+    save_hardware_file(
+        hardware_id=hardware_id,
+        cpu_serial=cpu_serial,
+        mac=mac,
+        status="pendente"
+    )
+
+    try:
+        payload = {
+            "uuid": cpu_serial,
+            "mac": mac,
+            "chave_licenca": hardware_id,
+            "produto": produto
+        }
+        response = requests.post(
+            "https://gerenciamento.bar7cordas.com.br/api/ativar_licenca",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+        if response.status_code in (200, 201):
+            data = response.json()
+            save_hardware_file(
+                hardware_id=hardware_id,
+                cpu_serial=cpu_serial,
+                mac=mac,
+                status=data.get("status", "pendente"),
+                valid_until=data.get("valid_until"),
+                modulos_override=data.get("modulos_override")
+            )
+            return True, "Licença registrada com sucesso."
+        else:
+            return False, f"Falha ao validar licença (HTTP {response.status_code})"
+    except Exception as e:
+        return False, f"Erro ao registrar licença: {e}"
 
 def normalize_cpu_serial(serial: str | None) -> str | None:
     if not serial:
@@ -87,16 +194,16 @@ def normalize_cpu_serial(serial: str | None) -> str | None:
 def normalize_mac(mac: str | None) -> str | None:
     if not mac:
         return None
-    mac = mac.strip()
-    pairs = re.findall(r'[0-9A-Fa-f]{2}', mac)
+    mac = mac.strip().lower()
+    pairs = re.findall(r'[0-9a-f]{2}', mac)
     if len(pairs) != 6:
-        m = re.search(r'([0-9A-Fa-f]{12})', mac)
+        m = re.search(r'([0-9a-fA-F]{12})', mac)
         if m:
             s = m.group(1)
             pairs = [s[i:i+2] for i in range(0, 12, 2)]
     if not pairs or len(pairs) != 6:
         return None
-    return ':'.join(p.lower() for p in pairs)
+    return ':'.join(pairs)
 
 def parse_installer_key(installer_key: str):
     if not installer_key or '_' not in installer_key:
@@ -113,7 +220,7 @@ def parse_installer_key(installer_key: str):
     return cpu_serial, mac
 
 def compute_hardware_hash(uuid, mac):
-    """Gera hash SHA256 da chave de licença."""
+    """Gera hash SHA256 da chave de licença no formato UUID|MAC."""
     if not uuid or not mac:
         return None
     combined = f"UUID:{uuid}|MAC:{mac}"
@@ -123,23 +230,16 @@ def compute_hardware_hash(uuid, mac):
 # Validação da licença
 # ------------------
 def get_license_status():
-    """Lê status e validade do arquivo .lic.json"""
     data = load_hardware_file()
     status = data.get("status", "Desconhecido")
     valid_until = data.get("valid_until", None)
     return status, valid_until
 
-from datetime import datetime, timedelta, timezone
-
-from datetime import datetime, timedelta, timezone
-
 def validate_license():
-    """Valida a licença atual"""
     data = load_hardware_file()
     status = data.get("status", "Desconhecido")
     valid_until = data.get("valid_until", None)
 
-    # Timezone do Brasil (UTC-3)
     BR_TZ = timezone(timedelta(hours=-3))
     now = datetime.now(BR_TZ)
     valid_until_dt = None
@@ -148,14 +248,12 @@ def validate_license():
     expires_at = None
     tolerance_days = 10
 
-    # Converter data de validade com timezone
     if valid_until:
         try:
             valid_until_dt = datetime.strptime(valid_until, "%Y-%m-%d").replace(tzinfo=BR_TZ)
         except Exception:
             valid_until_dt = None
 
-    # Lógica de validação
     if status == "ativo":
         if valid_until_dt and now <= valid_until_dt:
             valid = True
@@ -188,11 +286,7 @@ def validate_license():
         "expires_at": expires_at
     }
 
-# ------------------
-# Protected config data (para app.py)
-# ------------------
 def get_protected_config_data():
-    """Retorna dados essenciais para o app baseado na licença"""
     license_info = validate_license()
     if license_info["valid"]:
         blueprints_permitidos = ["main", "auth", "nanosip", "rede", "rotas", "relatorios"]
@@ -208,12 +302,6 @@ def get_protected_config_data():
     }
 
 def control_asterisk(action: str):
-    #return True, f"Simulação: Asterisk não será {action}ado."
-    """
-    Controla o serviço Asterisk.
-    action: 'start' ou 'stop'
-    Retorna tupla (sucesso: bool, mensagem: str)
-    """
     def is_asterisk_active():
         result = subprocess.run(["/usr/bin/systemctl", "is-active", "--quiet", "asterisk"])
         return result.returncode == 0
@@ -221,13 +309,11 @@ def control_asterisk(action: str):
     action = action.lower()
     active = is_asterisk_active()
 
-    # Se a ação já está no estado desejado, não faz nada
     if action == "start" and active:
         return True, "Asterisk já está rodando."
     if action == "stop" and not active:
         return True, "Asterisk já está parado."
 
-    # Executa a ação
     try:
         subprocess.run(["/usr/bin/systemctl", action, "asterisk"], check=True)
         return True, f"Asterisk {action}ado com sucesso."
@@ -235,7 +321,6 @@ def control_asterisk(action: str):
         return False, f"Erro ao {action} o Asterisk: {str(e)}"
 
 def load_licenca_data():
-    """Lê o conteúdo do arquivo .lic e retorna os dados como dicionário."""
     if not os.path.exists(LIC_FILE):
         return {}
     try:
@@ -243,71 +328,39 @@ def load_licenca_data():
             return json.load(f)
     except Exception:
         return {}
-
-
-def save_hardware_file(hardware_id, cpu_serial, mac, status, valid_until, modulos_override=None):
-    """Salva os dados da licença no arquivo local .lic."""
-    data = {
-        "hardware_id": hardware_id,
-        "cpu_serial": cpu_serial,
-        "mac": mac,
-        "status": status,
-        "valid_until": valid_until,
-        "modulos_override": modulos_override or "",
-    }
-    with open(LIC_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def load_licenca_data():
-    """Lê o conteúdo do arquivo .lic e retorna os dados como dicionário."""
-    if not os.path.exists(LIC_FILE):
-        return {}
-    try:
-        with open(LIC_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def save_hardware_file(hardware_id, cpu_serial, mac, status, valid_until, modulos_override=None):
-    """Salva os dados da licença no arquivo local .lic."""
-    data = {
-        "hardware_id": hardware_id,
-        "cpu_serial": cpu_serial,
-        "mac": mac,
-        "status": status,
-        "valid_until": valid_until,
-        "modulos_override": modulos_override or "",
-    }
-    with open(LIC_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-# --- Função principal que consulta o servidor remoto e atualiza o .lic ---
 
 def atualizar_licenca_remota():
-    """Consulta o status da licença no servidor e atualiza o arquivo local."""
+    """Atualiza a licença no servidor ou registra caso não exista arquivo .lic."""
     try:
-        info = produce_hardware_info()
         lic_data = load_licenca_data()
+        arquivo_existe = bool(lic_data)
 
-        hardware_id = lic_data.get("hardware_id")
-        cpu_serial = lic_data.get("cpu_serial")
-        mac = lic_data.get("mac")
-        is_vm = info.get("is_vm", False)
+        # Se não existe arquivo .lic, precisa criar os dados a partir do hardware
+        if not arquivo_existe:
+            info = produce_hardware_info()
+            cpu_serial = info.get("uuid")
+            mac = info.get("mac")
+            hardware_id = compute_hardware_hash(cpu_serial, mac)
+            lic_data = {
+                "hardware_id": hardware_id,
+                "cpu_serial": cpu_serial,
+                "mac": mac,
+                "status": "pendente"
+            }
+            save_hardware_file(**lic_data)  # cria o arquivo
 
-        if not hardware_id or not cpu_serial or not mac:
-            return False, "Nenhuma licença cadastrada para consultar."
-
+        # Produto dependendo se é VM ou Rasp
+        is_vm = False  # opcional: detecta se é VM via produce_hardware_info() se quiser
         produto = "nanosip_vm" if is_vm else "nanosip_rasp"
+
         payload = {
-            "uuid": cpu_serial,
-            "mac": mac,
-            "chave_licenca": hardware_id,
+            "uuid": lic_data["cpu_serial"],
+            "mac": lic_data["mac"],
+            "chave_licenca": lic_data["hardware_id"],
             "produto": produto
         }
 
+        # Consulta API para atualizar status, validade e módulos
         response = requests.post(
             "https://gerenciamento.bar7cordas.com.br/api/ativar_licenca",
             json=payload,
@@ -317,77 +370,20 @@ def atualizar_licenca_remota():
 
         if response.status_code in (200, 201):
             data = response.json()
-            status_api = data.get("status", "desconhecido")
-            validade = data.get("valid_until", "N/A")
-            modulos_override = data.get("modulos_override", "N/A")
-
-            save_hardware_file(
-                hardware_id=hardware_id,
-                cpu_serial=cpu_serial,
-                mac=mac,
-                status=status_api,
-                valid_until=validade,
-                modulos_override=modulos_override
-            )
-            return True, f"Status da licença atualizado: {status_api}"
+            lic_data.update({
+                "status": data.get("status", lic_data.get("status", "pendente")),
+                "valid_until": data.get("valid_until"),
+                "modulos_override": data.get("modulos_override")
+            })
+            save_hardware_file(**lic_data)
+            return True, f"Status da licença atualizado: {lic_data['status']}"
         else:
             return False, "Falha ao consultar licença. Verifique sua conexão."
 
     except Exception as e:
         return False, f"Erro ao consultar licença: {str(e)}"
 
+
 def get_modulos_override():
     lic_data = load_licenca_data()
     return lic_data.get("modulos_override")
-  
-#def atualizar_licenca_remota():
-#    """Consulta o status da licença no servidor e atualiza o arquivo local."""
-#    try:
-#        info = produce_hardware_info()
-#        lic_data = load_hardware_file()
-#
-#        hardware_id = lic_data.get("hardware_id")
-#        cpu_serial = lic_data.get("cpu_serial")
-#        mac = lic_data.get("mac")
-#        is_vm = info.get("is_vm", False)
-#
-#        if not hardware_id or not cpu_serial or not mac:
-#            return False, "Nenhuma licença cadastrada para consultar."
-#
-#        produto = "nanosip_vm" if is_vm else "nanosip_rasp"
-#        payload = {
-#            "uuid": cpu_serial,
-#            "mac": mac,
-#            "chave_licenca": hardware_id,
-#            "produto": produto
-#        }
-#
-#        response = requests.post(
-#            "https://gerenciamento.bar7cordas.com.br/api/ativar_licenca",
-#            json=payload,
-#            headers={"Content-Type": "application/json"},
-#            timeout=10
-#        )
-#
-#        if response.status_code in (200, 201):
-#            data = response.json()
-#            status_api = data.get("status", "desconhecido")
-#            validade = data.get("valid_until", "N/A")
-#            modulos_override = data.get("modulos_override", "N/A")
-#
-#            save_hardware_file(
-#                hardware_id=hardware_id,
-#                cpu_serial=cpu_serial,
-#                mac=mac,
-#                status=status_api,
-#                valid_until=validade,
-#                modulos_override=modulos_override
-#            )
-#            return True, f"Status da licença atualizado: {status_api}"
-#        else:
-#            return False, "Falha ao consultar licença. Verifique sua conexão."
-#    except Exception as e:
-#        return False, f"Erro ao consultar licença: {str(e)}"
-#
-    
-    

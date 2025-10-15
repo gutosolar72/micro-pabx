@@ -24,13 +24,13 @@
                                 <button type="submit" class="btn btn-primary">Salvar Chave</button>
                             </form>
                         {% endif %}
-                        <form method="POST" action="{{ url_for('main.licenca_status') }}">
-                            <input type="hidden" name="check_status" value="1">
-                            <button type="submit" class="btn btn-info mt-2">Checar Licença</button>
-                        </form>
                     {% else %}
-                        <p>Esta máquina é hardware físico. A licença será gerada automaticamente e não precisa de entrada manual.</p>
+                        <p>Licença gerada utilizando propriedades do hardware físico</p>
                     {% endif %}
+                    <form method="POST" action="{{ url_for('main.licenca_status') }}">
+                        <input type="hidden" name="check_status" value="1">
+                        <button type="submit" class="btn btn-info mt-2">Checar Licença</button>
+                    </form>
 
                     <hr>
 
@@ -54,4 +54,3 @@
     </div>
 </div>
 {% endblock %}
-
