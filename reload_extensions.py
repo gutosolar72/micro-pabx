@@ -41,6 +41,12 @@ def generate_extensions_conf():
         "[interno] ; Contexto Unificado para todas as chamadas"
     ]
 
+    # --- Include extensions_custom ---
+    conf_parts.extend([
+            "\n; --- Include extensions_custom --------",
+            "#include \"extensions_custom.conf\"\n"
+    ])
+
     # --- Rotas de Entrada ---
     if routes:
         conf_parts.append("\n; --- Regras Customizadas: Rotas de Entrada ---")
@@ -149,11 +155,6 @@ def generate_extensions_conf():
                 conf_parts.append(f"exten => {pattern},n,StopMixMonitor()")
             conf_parts.append(f"exten => {pattern},n,Hangup()\n")
 
-    # --- Include extensions_custom ---
-    conf_parts.extend([
-            "\n; --- Include extensions_custom --------",
-            "#include \"extensions_custom.conf\"\n"
-    ])
 
     db.close()
 

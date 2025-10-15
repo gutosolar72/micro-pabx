@@ -1,9 +1,13 @@
 import os
 import subprocess
 from database import get_ramais, get_localnets
+from licenca import get_modulos_override
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'nanosip.db')
+
+MODULOS = get_modulos_override()
+video_chamada = 'video' in MODULOS.lower().split(',')
 
 SIP_CONF = "/etc/asterisk/sip.conf"
 
@@ -18,7 +22,9 @@ def gerar_sip_conf():
         f.write("bindaddr=0.0.0.0\n")
         f.write("context=default\n")
         f.write("disallow=all\n")
-        f.write("allow=alaw,ulaw\n")
+        f.write("allow=alaw,ulaw,h264\n")
+        if video_chamada:
+            f.write("videosupport=yes\n")
         f.write("maxexpirey=3600\n")
         f.write("canreinvite=no\n")
         f.write("defaultexpirey=3600\n")
