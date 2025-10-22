@@ -26,7 +26,8 @@ def load_hardware_file():
     if os.path.exists(LIC_FILE):
         try:
             with open(LIC_FILE, "r") as f:
-                return json.load(f)
+                data = json.load(f)
+                return data
         except Exception as e:
             print(f"[licenca] Erro ao ler {LIC_FILE}: {e}")
     return {}
@@ -233,6 +234,7 @@ def get_license_status():
     data = load_hardware_file()
     status = data.get("status", "Desconhecido")
     valid_until = data.get("valid_until", None)
+    print(f"get_license_status -> status: {status} ----   valid:{valid_until}")
     return status, valid_until
 
 def validate_license():
@@ -253,13 +255,17 @@ def validate_license():
             valid_until_dt = datetime.strptime(valid_until, "%Y-%m-%d").replace(tzinfo=BR_TZ)
         except Exception:
             valid_until_dt = None
-
-    if status == "ativo":
-        if valid_until_dt and now <= valid_until_dt:
+    else:
+        valid_until_dt = None
+    
+    expires_at = None  # evita NameError no retorno final
+    
+    if status == "ativo" and valid_until_dt:
+        if now <= valid_until_dt:
             valid = True
             control_asterisk("start")
             message = f"Licença válida até {valid_until_dt.date()}"
-        elif valid_until_dt and now <= (valid_until_dt + timedelta(days=tolerance_days)):
+        elif now <= (valid_until_dt + timedelta(days=tolerance_days)):
             valid = True
             control_asterisk("start")
             expires_at = valid_until_dt + timedelta(days=tolerance_days)
@@ -268,24 +274,39 @@ def validate_license():
             valid = False
             control_asterisk("stop")
             message = f"Licença vencida em {valid_until_dt.date() if valid_until_dt else 'desconhecida'}. Sistema bloqueado."
+    
     elif status == "pendente":
-        valid = True
-        control_asterisk("stop")
-        message = "Licença pendente de validação. Possível problema de conexão."
+        if valid_until_dt:
+            # só entra aqui se houver data de validade
+            if now <= (valid_until_dt + timedelta(days=tolerance_days)):
+                valid = False
+                control_asterisk("start")
+                message = f"Licença com pendência de pagamento. Validade: {valid_until}"
+            else:
+                valid = False
+                control_asterisk("stop")
+                message = f"Licença com pendência de pagamento vencida em {valid_until_dt.date()}."
+        else:
+            # sem data nenhuma -> provavelmente primeira ativação
+            valid = False
+            control_asterisk("stop")
+            message = "Licença pendente de validação. Possível problema de conexão."
+    
     elif status == "bloqueado":
         valid = False
         control_asterisk("stop")
         message = "Licença bloqueada pelo gerenciamento. Sistema bloqueado."
+    
     else:
         valid = True
         message = "Problema ao verificar licença. Possível falha de conexão."
-
+    
     return {
         "valid": valid,
         "message": message,
         "expires_at": expires_at
     }
-
+    
 def get_protected_config_data():
     license_info = validate_license()
     if license_info["valid"]:

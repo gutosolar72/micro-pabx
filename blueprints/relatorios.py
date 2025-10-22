@@ -84,9 +84,10 @@ def relatorio_cdr():
     total_pages = (total // per_page) + (1 if total % per_page else 0)
 
     # verifica se o módulo 'record' está ativo
-    MODULOS = get_modulos_override()
-    has_record = 'record' in MODULOS.lower().split(',')
-
+    MODULOS = get_modulos_override() or ''  # garante que seja string
+    MODULOS = MODULOS.lower().split(',')    # converte em lista, mesmo se vazio
+    has_record = 'record' in MODULOS    
+    
     # adiciona o caminho completo para o arquivo de gravação, se habilitado
     if has_record:
         for r in registros_paginados:

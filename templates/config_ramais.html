@@ -8,6 +8,12 @@
     .form-group { flex: 1; display: flex; flex-direction: column; }
     .form-group label { font-weight: bold; margin-bottom: 5px; color: #333; }
     .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+
+    /* Remove setas de input number */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
     .form-group input:read-only { background-color: #f0f0f0; cursor: not-allowed; }
     .form-actions { display: flex; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
     .form-actions button { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
@@ -16,9 +22,7 @@
     .btn-delete { background-color: #dc3545; color: white; margin-left: auto; }
     .btn-delete:disabled { background-color: #ccc; cursor: not-allowed; }
 
-    .table th:last-child, .table td:last-child {
-        text-align: right;
-    }
+    .table th:last-child, .table td:last-child { text-align: right; }
 </style>
 
 <div class="card p-4">
@@ -121,6 +125,18 @@ function excluirRamalDireto(id, numero) {
         form.submit();
     }
 }
+
+// Validação ao salvar: senha sem caracteres especiais ou espaços
+document.getElementById('form-ramal').addEventListener('submit', function(e) {
+    const senha = document.getElementById('senha').value.trim();
+    const regex = /^[a-zA-Z0-9]+$/; // somente letras e números
+    if(!regex.test(senha)) {
+        e.preventDefault();
+        alert('A senha não pode conter espaços ou caracteres especiais. Use apenas letras e números.');
+        document.getElementById('senha').focus();
+        return false;
+    }
+});
 </script>
 {% endblock %}
 

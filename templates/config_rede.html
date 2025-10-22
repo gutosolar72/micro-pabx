@@ -7,9 +7,9 @@
     /* Estilos específicos para o formulário de configuração */
     .form-grid {
         display: grid;
-        grid-template-columns: 150px 1fr; /* Coluna para o rótulo e coluna para o campo */
-        gap: 15px; /* Espaço entre as linhas e colunas */
-        align-items: center; /* Alinha verticalmente o rótulo e o campo */
+        grid-template-columns: 150px 1fr;
+        gap: 15px;
+        align-items: center;
         margin-bottom: 20px;
     }
 
@@ -25,12 +25,12 @@
         padding: 10px;
         border: 1px solid #ccc;
         border-radius: 4px;
-        box-sizing: border-box; /* Garante que o padding não afete a largura total */
+        box-sizing: border-box;
     }
 
     .localnet-grid {
         display: grid;
-        grid-template-columns: 1fr 2fr 40px; /* Nome, Rede, Botão de remover */
+        grid-template-columns: 1fr 2fr 40px;
         gap: 10px;
         align-items: center;
         margin-bottom: 10px;
@@ -43,7 +43,7 @@
         border-radius: 4px;
         box-sizing: border-box;
     }
-    
+
     .remove-btn {
         background-color: #dc3545;
         color: white;
@@ -62,7 +62,7 @@
 
     .form-actions {
         display: flex;
-        justify-content: space-between; /* Alinha botões nas extremidades */
+        justify-content: space-between;
         margin-top: 25px;
         border-top: 1px solid #eee;
         padding-top: 20px;
@@ -98,13 +98,13 @@
     <p>Ajuste os parâmetros de rede do sistema. As alterações exigem privilégios de administrador.</p>
 
     <form method="POST" action="{{ url_for('rede.config_rede') }}">
-        
+
         <div class="form-grid">
             <label for="hostname">Hostname:</label>
             <input type="text" name="hostname" id="hostname" value="{{ network.hostname }}" required>
 
             <label for="iface">Interface:</label>
-            <input type="text" name="iface" id="iface" value="{{ network.iface }}" required>
+            <input type="text" name="iface" id="iface" value="{{ network.iface }}" readonly>
 
             <label for="ip">Endereço IP:</label>
             <input type="text" name="ip" id="ip" value="{{ network.ip_atual }}" required>
@@ -123,17 +123,25 @@
 
         <h3>Redes Locais (Localnet)</h3>
         <p>Defina as redes que o Asterisk considerará como locais para evitar problemas de NAT.</p>
+
+        <!-- Labels fixas -->
+        <div class="localnet-grid" style="font-weight:bold; background:#f5f5f5; padding:5px;">
+            <div>Nome da Rede (Ex: Portaria)</div>
+            <div>Rede/Máscara (Ex: 192.168.1.0/24)</div>
+            <div></div>
+        </div>
+
         <div id="localnet-container">
             {% for ln in localnets %}
                 <div class="localnet-grid">
-                    <input type="text" name="nome[]" value="{{ ln.nome }}" placeholder="Nome da rede (Ex: Escritório)" required/>
-                    <input type="text" name="localnet[]" value="{{ ln.localnet }}" placeholder="Rede/Máscara (Ex: 192.168.1.0/24)" required/>
+                    <input type="text" name="nome[]" value="{{ ln.nome }}" placeholder="Nome da rede (Ex: Escritório)" readonly/>
+                    <input type="text" name="localnet[]" value="{{ ln.localnet }}" placeholder="Rede/Máscara (Ex: 192.168.1.0/24)" readonly/>
                     <button type="button" class="remove-btn" onclick="removeLocalnet(this)">X</button>
                 </div>
             {% endfor %}
-            
+
             {% if not localnets %}
-                 <div class="localnet-grid">
+                <div class="localnet-grid">
                     <input type="text" name="nome[]" placeholder="Nome da rede (Ex: Escritório)" required/>
                     <input type="text" name="localnet[]" placeholder="Rede/Máscara (Ex: 192.168.1.0/24)" required/>
                     <button type="button" class="remove-btn" onclick="removeLocalnet(this)">X</button>
@@ -149,22 +157,91 @@
 </div>
 
 <script>
+// Adicionar/Remover redes locais
 function addLocalnet() {
     const container = document.getElementById('localnet-container');
     const div = document.createElement('div');
     div.className = 'localnet-grid';
     div.innerHTML = `
         <input type="text" name="nome[]" placeholder="Nome da rede (Ex: Escritório)" required/>
-        <input type="text" name="localnet[]" placeholder="Rede/Máscara (Ex: 192.168.1.0/24)" required/>
+        <input type="text" name="localnet[]" placeholder="Rede/Máscara (Ex: 192.168.1.0/255.255.255.0)" required/>
         <button type="button" class="remove-btn" onclick="removeLocalnet(this)">X</button>
     `;
     container.appendChild(div);
 }
 
 function removeLocalnet(button) {
-    // Remove o elemento pai do botão (a div.localnet-grid)
     button.parentElement.remove();
 }
+
+// Valida IPv4
+function isValidIPv4(ip) {
+    const regex = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
+    return regex.test(ip);
+}
+
+// Valida Rede/Máscara no formato IPv4/IP
+function isValidNetwork(value) {
+    const parts = value.split('/');
+    if(parts.length !== 2) return false;
+    const network = parts[0].trim();
+    const mask = parts[1].trim();
+    if(!isValidIPv4(network)) return false;
+    if(!isValidIPv4(mask)) return false;
+    return true;
+}
+
+// Validação ao salvar
+document.querySelector('.btn-save').addEventListener('click', function(e) {
+    const ip = document.getElementById('ip').value.trim();
+    const gateway = document.getElementById('gateway').value.trim();
+    const netmask = document.getElementById('netmask').value.trim();
+
+    // IP válido
+    if(!isValidIPv4(ip)) {
+        e.preventDefault();
+        alert('Endereço IP inválido! Ex: 192.168.0.10');
+        document.getElementById('ip').focus();
+        return false;
+    }
+
+    // Máscara válida
+    if(!isValidIPv4(netmask)) {
+        e.preventDefault();
+        alert('Máscara de rede inválida! Ex: 255.255.255.0');
+        document.getElementById('netmask').focus();
+        return false;
+    }
+
+    // Gateway válido
+    if(!isValidIPv4(gateway)) {
+        e.preventDefault();
+        alert('Gateway inválido! Ex: 192.168.0.1');
+        document.getElementById('gateway').focus();
+        return false;
+    }
+
+    // Gateway diferente do IP
+    if(ip === gateway) {
+        e.preventDefault();
+        alert('O Gateway não pode ser igual ao Endereço IP!');
+        document.getElementById('gateway').focus();
+        return false;
+    }
+
+    // Validação redes locais adicionadas
+    const localnetValues = document.getElementsByName('localnet[]');
+    for(let i=0; i<localnetValues.length; i++) {
+        const val = localnetValues[i].value.trim();
+        if(!isValidNetwork(val)) {
+            e.preventDefault();
+            alert('Rede/Máscara inválida na linha ' + (i+1) + '. Ex: 192.168.0.0/255.255.255.0');
+            localnetValues[i].focus();
+            return false;
+        }
+    }
+});
 </script>
+
 {% endblock %}
 

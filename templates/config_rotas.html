@@ -29,6 +29,9 @@
     }
     .table th, .table td { vertical-align: middle; }
     .table-responsive { overflow-x: auto; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
 
     /* --- NOVOS ESTILOS --- */
     #horariosCard {
@@ -86,7 +89,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="numero_entrada" class="form-label">Número</label>
-                    <input type="text" class="form-control" id="numero_entrada" name="numero_entrada" required>
+                    <input type="number" class="form-control" id="numero_entrada" name="numero_entrada" required>
                 </div>
                 <div class="mb-3">
                     <label for="dest_fila_else" class="form-label">Destino Padrão (Fila)</label>
