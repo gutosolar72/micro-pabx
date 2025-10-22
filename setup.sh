@@ -63,46 +63,30 @@ timedatectl set-timezone America/Sao_Paulo
 
 echo "################# Criando usuários do sistema #################################"
 # Cria o usuário nanosip se ele não existir
-if ! id "nanosip" &>/dev/null; then
-    useradd -m -s /bin/bash nanosip
-    usermod -aG sudo,systemd-journal,netdev,asterisk nanosip
-    echo "Usuário 'nanosip' criado."
-else
-    echo "Usuário 'nanosip' já existe."
-fi
+useradd -m -s /bin/bash nanosip
+echo "Usuário 'nanosip' criado."
 
 # Cria o usuário nanosip se ele não existir
-if ! id "admin" &>/dev/null; then
-    useradd -m -s /bin/bash admin
-    echo "Usuário 'admin' criado."
-    chpasswd <<<"admin:nanosip"
-else
-    echo "Usuário 'admin' já existe."
-fi
+useradd -m -s /bin/bash admin
+echo "Usuário 'admin' criado."
+chpasswd <<<"admin:nanosip"
 
-# Cria o usuário de sistema asterisk se ele não existir
-if ! id "asterisk" &>/dev/null; then
-    useradd -r -s /bin/false --no-create-home asterisk
-    echo "Usuário 'asterisk' criado."
-else
-    echo "Usuário 'asterisk' já existe."
-fi
+useradd -r -s /bin/false --no-create-home asterisk
+echo "Usuário 'asterisk' criado."
+
+usermod -aG sudo,systemd-journal,netdev,asterisk nanosip
 
 echo "################# Configurando aliases convenientes ###########################"
 echo "alias vim='vim.tiny'" | tee -a /root/.bashrc > /dev/null
-# Garante que o diretório home do nanosip exista antes de escrever nele
-if [ -d "/home/nanosip" ]; then
-    echo "alias vim='vim.tiny'" >> /home/nanosip/.bashrc
-    chown nanosip:nanosip /home/nanosip/.bashrc
-fi
+
+echo "alias vim='vim.tiny'" >> /home/nanosip/.bashrc
+chown nanosip:nanosip /home/nanosip/.bashrc
 
 echo "######### Configurando script de reset network #########"
 chmod +x /opt/nanosip/config/reset_network.sh
 chown admin:admin /opt/nanosip/config/reset_network.sh
 
-if [ -d "/home/admin" ]; then
-    echo "alias reset_network='sudo /opt/nanosip/config/reset_network.sh'" >> /home/admin/.bashrc
-fi
+echo "alias reset_network='sudo /opt/nanosip/config/reset_network.sh'" >> /home/admin/.bashrc
   
 echo "Configurando permissões de sudo para o script de reset..."
 cat << EOF > /etc/sudoers.d/admin_network_reset
