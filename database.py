@@ -83,14 +83,14 @@ def init_db():
     c.execute("SELECT * FROM users WHERE username='admin'")
     if not c.fetchone():
         print("Usuário 'admin' não encontrado. Criando com senha padrão...")
-        senha_padrao = "123mudar@".encode("utf-8")
+        senha_padrao = "nanosip".encode("utf-8")
         hashed = bcrypt.hashpw(senha_padrao, bcrypt.gensalt())
         role = "admin"
         created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         updated_at = created_at
         c.execute("INSERT INTO users (username, password_hash, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
                   ("admin", hashed.decode("utf-8"), role, created_at, updated_at))
-        print(">>> Usuário 'admin' criado com senha padrão: 123mudar@ <<<")
+        print(">>> Usuário 'admin' criado com senha padrão: nanosip <<<")
 
     conn.commit()
     conn.close()
