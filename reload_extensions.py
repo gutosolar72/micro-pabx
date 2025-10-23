@@ -1,6 +1,6 @@
 import os
 from database import get_db
-from licenca import get_modulos_override
+from licenca import get_modulos
 
 EXTENSIONS_CONF_PATH = '/etc/asterisk/extensions.conf'
 
@@ -33,7 +33,7 @@ def generate_extensions_conf():
     peers = get_all_peers(db)
     queues = get_all_queues(db)
     routes = get_all_routes(db)
-    MODULOS = get_modulos_override()
+    MODULOS = get_modulos()
     gravar_chamadas = 'record' in MODULOS.lower().split(',')
 
     conf_parts = [

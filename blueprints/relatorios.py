@@ -5,7 +5,7 @@ from werkzeug.utils import safe_join
 from .main import license_message,license_context
 from flask import abort, send_from_directory, Blueprint, render_template, request, url_for
 from datetime import datetime
-from licenca import get_modulos_override
+from licenca import get_modulos
 
 relatorios_bp = Blueprint("relatorios", __name__, template_folder="../templates")
 
@@ -84,7 +84,7 @@ def relatorio_cdr():
     total_pages = (total // per_page) + (1 if total % per_page else 0)
 
     # verifica se o módulo 'record' está ativo
-    MODULOS = get_modulos_override() or ''  # garante que seja string
+    MODULOS = get_modulos() or ''  # garante que seja string
     MODULOS = MODULOS.lower().split(',')    # converte em lista, mesmo se vazio
     has_record = 'record' in MODULOS    
     
@@ -94,7 +94,12 @@ def relatorio_cdr():
             # remove ponto e tudo depois do uniqueid
             uniqueid_safe = r['uniqueid'].split('.')[0]
             filename = f"{r['src']}-{r['dst']}-{uniqueid_safe}.wav"
-            r['recording'] = url_for('relatorios.recordings', filename=filename)
+            full_path = os.path.join(MONITOR_DIR, filename)
+
+            if os.path.isfile(full_path) and os.path.getsize(full_path) > 44:    
+                r['recording'] = url_for('relatorios.recordings', filename=filename)
+            else:
+                r['recording'] = None  # gravação não existe
 
     return render_template(
         "relatorio_cdr.html",

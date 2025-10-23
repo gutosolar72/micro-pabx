@@ -1,12 +1,12 @@
 import os
 import subprocess
 from database import get_ramais, get_localnets
-from licenca import get_modulos_override
+from licenca import get_modulos
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'nanosip.db')
 
-MODULOS = get_modulos_override()
+MODULOS = get_modulos()
 video_chamada = 'video' in MODULOS.lower().split(',')
 
 SIP_CONF = "/etc/asterisk/sip.conf"

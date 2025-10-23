@@ -32,7 +32,7 @@ def load_hardware_file():
             print(f"[licenca] Erro ao ler {LIC_FILE}: {e}")
     return {}
 
-def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, valid_until=None, modulos_override=None):
+def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, valid_until=None, modulos=None):
     """Salva o arquivo oculto de licença (.lic.json)."""
     ensure_lic_dir()
 
@@ -46,8 +46,8 @@ def save_hardware_file(hardware_id, cpu_serial=None, mac=None, status=None, vali
         data["status"] = status
     if valid_until is not None:
         data["valid_until"] = valid_until
-    if modulos_override is not None:
-        data["modulos_override"] = modulos_override
+    if modulos is not None:
+        data["modulos"] = modulos
 
     try:
         with open(LIC_FILE, "w") as f:
@@ -179,7 +179,7 @@ def registrar_chave_licenca(posted_key, is_vm=False):
                 mac=mac,
                 status=data.get("status", "pendente"),
                 valid_until=data.get("valid_until"),
-                modulos_override=data.get("modulos_override")
+                modulos=data.get("modulos")
             )
             return True, "Licença registrada com sucesso."
         else:
@@ -394,7 +394,7 @@ def atualizar_licenca_remota():
             lic_data.update({
                 "status": data.get("status", lic_data.get("status", "pendente")),
                 "valid_until": data.get("valid_until"),
-                "modulos_override": data.get("modulos_override")
+                "modulos": data.get("modulos")
             })
             save_hardware_file(**lic_data)
             return True, f"Status da licença atualizado: {lic_data['status']}"
@@ -405,6 +405,6 @@ def atualizar_licenca_remota():
         return False, f"Erro ao consultar licença: {str(e)}"
 
 
-def get_modulos_override():
+def get_modulos():
     lic_data = load_licenca_data()
-    return lic_data.get("modulos_override")
+    return lic_data.get("modulos")
