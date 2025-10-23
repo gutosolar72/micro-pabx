@@ -12,6 +12,9 @@
             <label for="password" class="form-label">Senha (deixe em branco para não alterar)</label>
             <input type="password" name="password" id="password" class="form-control">
         </div>
+        {% if user.username == "admin" %}
+            <input type="hidden" name="role" value="{{ user.role }}">
+        {% endif %}
         {% if user.username != "admin" %}
         <div class="mb-3">
             <label for="role" class="form-label">Role</label>
