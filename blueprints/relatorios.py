@@ -45,6 +45,15 @@ def parse_cdr():
                     grava_file = os.path.join(MONITOR_DIR, f"{uniqueid}.wav")
                     recording = grava_file if os.path.isfile(grava_file) else None
 
+                    status_map = {
+                        "ANSWERED": "Atendida",
+                        "BUSY": "Ocupado",
+                        "FAILED": "Falha",
+                        "NO ANSWER": "Não atendida",
+                        "CANCEL": "Cancelada",
+                        "CONGESTION": "Congestionada"
+                    }
+
                     registro = {
                         "calldate": calldate_br,
                         "src": row[1],
@@ -54,9 +63,7 @@ def parse_cdr():
                         "lastdata": row[8],
                         "duration": row[12],
                         "billsec": row[13],
-                        "disposition": "Atendida" if row[14].upper() == "ANSWERED" else (
-                            "Ocupado" if row[14].upper() == "BUSY" else row[14].capitalize()
-                        ),
+                        "disposition": status_map.get(disposition, disposition.capitalize()),
                         "uniqueid": uniqueid,
                         "recording": recording
                     }
