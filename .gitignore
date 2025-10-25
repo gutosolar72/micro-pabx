@@ -1,5 +1,7 @@
 venv/
 __pycache__/
+!licenca.pyc
+!scripts/check_license.pyc
 *.pyc
 config/nanosip_sudoers
 config/licenca.cache
