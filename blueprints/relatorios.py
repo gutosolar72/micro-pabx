@@ -45,6 +45,8 @@ def parse_cdr():
                     grava_file = os.path.join(MONITOR_DIR, f"{uniqueid}.wav")
                     recording = grava_file if os.path.isfile(grava_file) else None
 
+                    disposition = row[14].strip().upper() if len(row) > 14 else "UNKNOWN"
+
                     status_map = {
                         "ANSWERED": "Atendida",
                         "BUSY": "Ocupado",
