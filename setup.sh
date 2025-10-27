@@ -56,7 +56,10 @@ echo "--- [PARTE 1/3] Iniciando Instalação do Asterisk e Dependências ---"
 
 echo "################# Atualizando pacotes e instalando dependências ###############################"
 apt-get update
-apt-get install -y build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug sngrep tcpdump
+
+#apt-get install -y build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug sngrep tcpdump
+
+apt-get install -y build-essential libedit-dev uuid-dev libxml2-dev libsqlite3-dev subversion python3.11 python3.11-venv python3.11-dev sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump
 
 # configurando Time zone
 timedatectl set-timezone America/Sao_Paulo
@@ -101,20 +104,43 @@ echo "Configuração do usuário 'admin' e do script de reset concluída."
 # Navega para o diretório de fontes
 cd /usr/src/
 
+echo "################# Baixando e descompactando o jansson ##################"
+if [ ! -d "jansson-2.14" ]; then
+wget -q https://gerenciamento.nanosip.com.br/static/src/jansson-2.14.tar.gz
+tar -xzf jansson-2.14.tar.gz
+    cd jansson-2.14
+    ./configure
+    make
+    make install
+    cd ..
+fi
+echo "################# Baixando e descompactando o pjproject ##################"
+if [ ! -d "pjproject-2.14" ]; then
+    wget -q https://gerenciamento.nanosip.com.br/static/src/pjproject-2.14.tar.bz2
+    tar -xjf pjproject-2.14.tar.bz2
+    cd pjproject-2.14
+    ./configure
+    make dep
+    make
+    make install
+    cd ..
+fi
+
 echo "################# Baixando e descompactando o Asterisk ##################"
 if [ ! -f "asterisk-18-current.tar.gz" ]; then
-    wget http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-18-current.tar.gz
+    wget https://gerenciamento.nanosip.com.br/static/src/asterisk-18-current.tar.gz
+    tar -xvzf asterisk-18-current.tar.gz
+
+    cd asterisk-18.*/
+
+    echo "################# Configurando, compilando e instalando o Asterisk ####################"
+    ./configure
+    make
+    make install
+    make samples
+    make config
 fi
-tar -xvzf asterisk-18-current.tar.gz
 
-cd asterisk-18.*/
-
-echo "################# Configurando, compilando e instalando o Asterisk ####################"
-./configure --with-jansson-bundled
-make
-make install
-make samples
-make config
 
 # Chamada da função de reparo do Python
 check_and_repair_python
