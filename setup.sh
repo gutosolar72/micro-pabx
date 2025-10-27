@@ -63,7 +63,7 @@ apt-get update
 apt-get install -y wget build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libffi-dev libncurses5-dev libgdbm-dev libedit-dev libnss3-dev uuid-dev libxml2-dev libsqlite3-dev subversion sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump 
 
 cd /usr/src
-wget https://www.python.org/ftp/python/3.11.10/Python-3.11.10.tgz
+wget https://www.gerenciamento.nanosip.com.br/static/src/Python-3.11.10.tgz
 tar xvf Python-3.11.10.tgz
 cd Python-3.11.10
 ./configure --enable-optimizations --with-ensurepip=install
@@ -191,6 +191,7 @@ echo "--- [PARTE 2/3] Configurando Ambiente Python do Nanosip ---"
 # Pega o caminho absoluto do diretório onde o Nanosip está (assumindo /opt/nanosip )
 BASE_DIR="/opt/nanosip"
 VENV_DIR="$BASE_DIR/venv"
+PACKAGES_DIR="/opt/nanosip/static/python_packages"
 
 if [ ! -d "$BASE_DIR" ]; then
     echo "ERRO: O diretório do Nanosip ($BASE_DIR) não foi encontrado."
@@ -206,7 +207,7 @@ su - nanosip -c "/usr/local/bin/python3.11 -m venv $VENV_DIR"
 
 echo "Instalando dependências Python no ambiente virtual..."
 # Executa a instalação dos pacotes como 'nanosip'
-su - nanosip -c "source $VENV_DIR/bin/activate && pip install -r $BASE_DIR/requirements.txt"
+su - nanosip -c "source $VENV_DIR/bin/activate && pip install --no-index --find-links=$PACKAGES_DIR -r $BASE_DIR/requirements.txt"
 
 echo "--- [PARTE 2/3] Ambiente Python Concluído ---"
 echo ""
