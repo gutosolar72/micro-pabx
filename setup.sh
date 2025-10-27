@@ -57,9 +57,17 @@ echo "--- [PARTE 1/3] Iniciando Instalação do Asterisk e Dependências ---"
 echo "################# Atualizando pacotes e instalando dependências ###############################"
 apt-get update
 
-#apt-get install -y build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug sngrep tcpdump
+#apt-get install -y wget build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug sngrep tcpdump
 
-apt-get install -y build-essential libedit-dev uuid-dev libxml2-dev libsqlite3-dev subversion python3.11 python3.11-venv python3.11-dev sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump
+cd /usr/src
+wget https://www.python.org/ftp/python/3.11.10/Python-3.11.10.tgz
+tar xvf Python-3.11.10.tgz
+cd Python-3.11.10
+./configure --enable-optimizations --with-ensurepip=install
+make -j$(nproc)
+make altinstall
+
+apt-get install -y build-essential libedit-dev uuid-dev libxml2-dev libsqlite3-dev subversion sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump
 
 # configurando Time zone
 timedatectl set-timezone America/Sao_Paulo
@@ -193,7 +201,7 @@ chown -R nanosip:nanosip "$BASE_DIR"
 
 echo "Criando ambiente virtual Python em $VENV_DIR..."
 # Executa a criação do virtualenv como o usuário 'nanosip'
-su - nanosip -c "virtualenv $VENV_DIR"
+su - nanosip -c "/usr/local/bin/python3.11 -m venv $VENV_DIR"
 
 echo "Instalando dependências Python no ambiente virtual..."
 # Executa a instalação dos pacotes como 'nanosip'
