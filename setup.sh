@@ -67,7 +67,7 @@ cd Python-3.11.10
 make -j$(nproc)
 make altinstall
 
-apt-get install -y build-essential libedit-dev uuid-dev libxml2-dev libsqlite3-dev subversion sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump
+apt-get install -y wget build-essential libedit-dev uuid-dev libxml2-dev libsqlite3-dev subversion sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump
 
 # configurando Time zone
 timedatectl set-timezone America/Sao_Paulo
