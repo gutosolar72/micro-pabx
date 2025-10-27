@@ -151,7 +151,7 @@ iface {iface} inet static
             service_name = "nanosip-admin@update_network_config.service"
             subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
 
-            flash("Tarefa de atualização de rede iniciada com sucesso.", "success")
+            flash("Rede atualizada com sucesso.", "success")
 
         except Exception as e:
             flash(f"Erro ao iniciar tarefa de atualização de rede: {str(e)}", "danger")

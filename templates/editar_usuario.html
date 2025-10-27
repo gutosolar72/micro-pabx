@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .card {
+        padding: 15px;
+        min-height: 60vh;
+    }
+</style>
 <div class="card">
     <h2 class="mb-3">Editar Usuário</h2>
     <form action="{{ url_for('rotas.editar_usuario', id=user.id) }}" method="POST">
