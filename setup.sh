@@ -118,7 +118,7 @@ if [ ! -d "jansson-2.14.1" ]; then
     wget -q https://gerenciamento.nanosip.com.br/static/src/jansson-2.14.1.tar.gz
     tar -xzf jansson-2.14.1.tar.gz
     cd jansson-2.14.1
-    ./configure
+    ./configure --prefix=/usr
     make
     make install
     cd ..
@@ -128,7 +128,7 @@ if [ ! -d "pjproject-2.14" ]; then
     wget -q https://gerenciamento.nanosip.com.br/static/src/pjproject-2.14.tar.bz2
     tar -xjf pjproject-2.14.tar.bz2
     cd pjproject-2.14
-    ./configure
+    ./configure --prefix=/usr
     make dep
     make
     make install
