@@ -60,7 +60,7 @@ apt-get update
 #apt-get install -y wget build-essential libedit-dev uuid-dev libjansson-dev libxml2-dev libsqlite3-dev subversion virtualenv sudo python3 jq libcurl4-openssl-dev reportbug sngrep tcpdump
 
 
-apt-get install -y wget build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libffi-dev libncurses5-dev libgdbm-dev libedit-dev libnss3-dev uuid-dev libxml2-dev libsqlite3-dev subversion sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump 
+apt-get install -y wget build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libffi-dev libncurses5-dev libgdbm-dev libedit-dev libnss3-dev uuid-dev libxml2-dev libsqlite3-dev subversion sudo jq libcurl4-openssl-dev reportbug sngrep tcpdump
 
 cd /usr/src
 wget https://www.gerenciamento.nanosip.com.br/static/src/Python-3.11.10.tgz
@@ -99,7 +99,7 @@ chmod +x /opt/nanosip/config/reset_network.sh
 chown admin:admin /opt/nanosip/config/reset_network.sh
 
 echo "alias reset_network='sudo /opt/nanosip/config/reset_network.sh'" >> /home/admin/.bashrc
-  
+
 echo "Configurando permissões de sudo para o script de reset..."
 cat << EOF > /etc/sudoers.d/admin_network_reset
 # Permite ao usuário 'admin' executar o script de reset de rede sem senha.
@@ -114,10 +114,10 @@ echo "Configuração do usuário 'admin' e do script de reset concluída."
 cd /usr/src/
 
 echo "################# Baixando e descompactando o jansson ##################"
-if [ ! -d "jansson-2.14" ]; then
-wget -q https://gerenciamento.nanosip.com.br/static/src/jansson-2.14.tar.gz
-tar -xzf jansson-2.14.tar.gz
-    cd jansson-2.14
+if [ ! -d "jansson-2.14.1" ]; then
+    wget -q https://gerenciamento.nanosip.com.br/static/src/jansson-2.14.1.tar.gz
+    tar -xzf jansson-2.14.1.tar.gz
+    cd jansson-2.14.1
     ./configure
     make
     make install
@@ -136,14 +136,14 @@ if [ ! -d "pjproject-2.14" ]; then
 fi
 
 echo "################# Baixando e descompactando o Asterisk ##################"
-if [ ! -f "asterisk-18-current.tar.gz" ]; then
+if [ ! -d "asterisk-18.22.0" ]; then
     wget https://gerenciamento.nanosip.com.br/static/src/asterisk-18-current.tar.gz
     tar -xvzf asterisk-18-current.tar.gz
 
     cd asterisk-18.*/
 
     echo "################# Configurando, compilando e instalando o Asterisk ####################"
-    ./configure
+    ./configure --with-jansson-include=/usr/local/include --with-jansson-lib=/usr/local/lib
     make
     make install
     make samples
@@ -155,8 +155,6 @@ fi
 check_and_repair_python
 
 echo "################# Configurando permissões e serviço do Asterisk ########################"
-#sed -i 's/;runuser = asterisk/runuser = asterisk/' /etc/asterisk/asterisk.conf
-#sed -i 's/;rungroup = asterisk/rungroup = asterisk/' /etc/asterisk/asterisk.conf
 chown -R asterisk:asterisk /var/log/asterisk /var/spool/asterisk /var/lib/asterisk /etc/asterisk
 
 ln -s /opt/nanosip/config/asterisk.service /etc/systemd/system/asterisk.service
@@ -207,7 +205,7 @@ su - nanosip -c "/usr/local/bin/python3.11 -m venv $VENV_DIR"
 
 echo "Instalando dependências Python no ambiente virtual..."
 # Executa a instalação dos pacotes como 'nanosip'
-su - nanosip -c "source $VENV_DIR/bin/activate && pip install --no-index --find-links=$PACKAGES_DIR -r $BASE_DIR/requirements.txt"
+su - nanosip -c "source $VENV_DIR/bin/activate && pip install --no-index --find-links=$PACKAGES_DIR -r $PACKAGES_DIR/requirements.txt"
 
 echo "--- [PARTE 2/3] Ambiente Python Concluído ---"
 echo ""
@@ -268,9 +266,14 @@ echo "" > /etc/motd
 
 cp "$BASE_DIR/config/nanosip_logrotate" /etc/logrotate.d/
 
+echo " ########## Limpando os arquivos de instalação ###############"
+
+rm -rf /usr/src/*
+rm -rf $PACKAGES_DIR
+
+
 echo "=============================================================================="
 echo "--- SETUP GERAL CONCLUÍDO! ---"
 echo "Para verificar o status da aplicação, use: sudo systemctl status nanosip.service"
 echo "Para verificar o status do Asterisk, use: sudo systemctl status asterisk.service"
 echo "=============================================================================="
-
