@@ -113,43 +113,59 @@ echo "Configuração do usuário 'admin' e do script de reset concluída."
 # Navega para o diretório de fontes
 cd /usr/src/
 
-echo "################# Baixando e descompactando o jansson ##################"
+echo "################# Instalando JANSSON ##################"
 if [ ! -d "jansson-2.14.1" ]; then
     wget -q https://gerenciamento.nanosip.com.br/static/src/jansson-2.14.1.tar.gz
     tar -xzf jansson-2.14.1.tar.gz
     cd jansson-2.14.1
-    ./configure --prefix=/usr
+    ./configure --prefix=/usr --libdir=/usr/lib
     make
     make install
     cd ..
 fi
-echo "################# Baixando e descompactando o pjproject ##################"
+
+
+echo "################# Instalando PJPROJECT ##################"
 if [ ! -d "pjproject-2.14" ]; then
     wget -q https://gerenciamento.nanosip.com.br/static/src/pjproject-2.14.tar.bz2
     tar -xjf pjproject-2.14.tar.bz2
     cd pjproject-2.14
-    ./configure --prefix=/usr
+
+    # Compilação com suporte a compartilhamento e -fPIC para evitar o erro de relocação
+    CFLAGS="-fPIC" ./configure --prefix=/usr --libdir=/usr/lib \
+        --enable-shared --disable-sound --disable-resample --disable-video --disable-opencore-amr
+
     make dep
+    make clean
     make
     make install
+    ldconfig
     cd ..
 fi
 
-echo "################# Baixando e descompactando o Asterisk ##################"
-if [ ! -d "asterisk-18.22.0" ]; then
-    wget https://gerenciamento.nanosip.com.br/static/src/asterisk-18-current.tar.gz
-    tar -xvzf asterisk-18-current.tar.gz
 
+echo "################# Instalando ASTERISK ##################"
+if [ ! -d "asterisk-18.22.0" ]; then
+    wget -q https://gerenciamento.nanosip.com.br/static/src/asterisk-18-current.tar.gz
+    tar -xvzf asterisk-18-current.tar.gz
     cd asterisk-18.*/
 
     echo "################# Configurando, compilando e instalando o Asterisk ####################"
-    ./configure --with-jansson-include=/usr/local/include --with-jansson-lib=/usr/local/lib
+    ./configure \
+        --with-pjproject-bundled=no \
+        --with-pjproject-include=/usr/include \
+        --with-pjproject-lib=/usr/lib \
+        --with-jansson-include=/usr/include \
+        --with-jansson-lib=/usr/lib
+
+    make menuselect.makeopts
     make
     make install
     make samples
     make config
+    ldconfig
+    cd ..
 fi
-
 
 # Chamada da função de reparo do Python
 check_and_repair_python
