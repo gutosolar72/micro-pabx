@@ -27,10 +27,12 @@
                     {% else %}
                         <p>Licença gerada utilizando propriedades do hardware físico</p>
                     {% endif %}
+                    {% if not is_vm or (is_vm and status.hardware_id) %}
                     <form method="POST" action="{{ url_for('main.licenca_status') }}">
                         <input type="hidden" name="check_status" value="1">
                         <button type="submit" class="btn btn-info mt-2">Checar Licença</button>
                     </form>
+                    {% endif %}
 
                     <hr>
 
