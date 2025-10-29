@@ -31,6 +31,6 @@ systemctl restart networking.service
 
 echo ""
 echo "--- Reset de Rede Concluído! ---"
-echo "A interface $interface agora está configurada para receber um IP por DHCP"
-echo "Verifique no seu servidor DHCP ou no Terminal o IP atribuido"
-ip a
+echo "Verifique abaixo o IP atribuido por DHCP ao NanoSIP"
+sleep 5
+ip -4 -o addr show up scope global | awk '{print $4}' | cut -d/ -f1
