@@ -270,10 +270,7 @@ auto lo
 iface lo inet loopback
 
 auto $interface
-iface $interface inet static
-    address 172.16.0.10
-    netmask 255.255.255.0
-    gateway 172.16.0.10
+iface $interface inet dhcp
 EOF
 
 cat "$BASE_DIR/config/05-nanosip-info" > /etc/update-motd.d/05-nanosip-info

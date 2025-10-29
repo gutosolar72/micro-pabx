@@ -17,10 +17,7 @@ CONFIG="auto lo
 iface lo inet loopback
 
 auto $interface
-iface $interface inet static
-address 172.16.0.10
-netmask 255.255.255.0
-gateway 172.16.0.200
+iface $interface inet dhcp
 "
 
 # 1. Sobrescreve o arquivo /etc/network/interfaces.
@@ -34,6 +31,6 @@ systemctl restart networking.service
 
 echo ""
 echo "--- Reset de Rede Concluído! ---"
-echo "A interface $interface agora está configurada para responder provisoriamente no IP 172.16.0.10."
-echo "Coloque um IP adicional da rede 172 em seu notebook e acesse o sistema para configurar a nova rede."
-
+echo "A interface $interface agora está configurada para receber um IP por DHCP"
+echo "Verifique no seu servidor DHCP ou no Terminal o IP atribuido"
+ip a

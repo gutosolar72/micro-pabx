@@ -30,7 +30,7 @@ echo ""
 
 # Help para o comando de reset
 echo -e "  ${GREEN}Dica de Manutenção:${NC}"
-echo "  Para resetar as configurações de rede para 172.16.0.10,"
+echo "  Para executar o reset da rede e configura-la DHCP,"
 echo "  execute o comando:"
 echo ""
 echo -e "    ${YELLOW}reset_network${NC}"
