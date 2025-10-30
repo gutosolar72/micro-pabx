@@ -156,7 +156,8 @@ if [ ! -d "asterisk-18.22.0" ]; then
         --with-pjproject-include=/usr/include \
         --with-pjproject-lib=/usr/lib \
         --with-jansson-include=/usr/include \
-        --with-jansson-lib=/usr/lib
+        --with-jansson-lib=/usr/lib \
+        --disable BUILD_NATIVE
 
     make menuselect.makeopts
     make
