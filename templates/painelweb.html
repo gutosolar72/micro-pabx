@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card text-center p-3" style="min-height: 60vh;">
+    <div class="d-flex justify-content-center gap-3">
+        <!-- Coluna Filas -->
+        <div style="min-width:180px; border-right:2px solid rgba(255,255,255,0.15); padding-right:1rem;">
+            <h5 style="margin-bottom:0.5rem;">Filas</h5>
+            <div id="grade-filas" class="d-flex flex-column align-items-center gap-3"
+                style="border: 2px solid rgba(255,255,255,0.3);
+                       border-radius: 12px;
+                       padding: 10px;
+                       background: rgba(0,0,0,0.05);
+                       box-shadow: inset 0 0 8px rgba(0,0,0,0.2);">
+            </div>
+        </div>
+
+        <!-- Coluna Ramais -->
+        <div style="flex-grow:1;">
+            <h5 style="margin-bottom:0.5rem;">Ramais</h5>
+            <div id="grade-ramais" class="d-flex flex-wrap justify-content-start gap-3"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* === CARDS DE RAMAIS === */
+.ramal-card {
+    position: relative;
+    width: 120px;
+    height: 80px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1px 3px;
+    color: #fff;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+    text-align: center;
+    transition: all 0.25s ease;
+}
+.ramal-card::before {
+    content:"";
+    position:absolute;
+    inset:0;
+    background: linear-gradient(120deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 35%, rgba(0,0,0,0.12) 100%);
+    mix-blend-mode: overlay;
+    pointer-events:none;
+}
+.ramal-numero { font-size: 1.05rem; font-weight: 600; opacity: 0.95; text-shadow: 0 1px 0 rgba(0,0,0,0.3); z-index: 2; margin-top: 2px; }
+.ramal-nome { font-size: 1.2rem; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.45); z-index: 2; margin-top: 0px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
+.ramal-rodape { margin-bottom: 5px; font-size: 0.65rem; z-index: 2; color: rgba(255,255,255,0.95); text-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+.ramal-badge { position: absolute; top: 4px; right: 4px; min-width: 21px; height: 18px; padding: 0 5px;
+    display:inline-flex; align-items:center; justify-content:center; border-radius:5px; font-size:0.6rem; font-weight:700;
+    color:#fff; box-shadow:0 3px 6px rgba(0,0,0,0.35); z-index:6; border:1px solid rgba(255,255,255,0.12); }
+
+/* === STATUS DE RAMAIS === */
+.status-offline { background: linear-gradient(160deg, #c4c4c4 0%, #9b9b9b 45%, #5f5f5f 100%); filter: brightness(0.45) contrast(0.9); }
+.status-online { background: linear-gradient(160deg, #53f4b0 0%, #18c57a 40%, #0a7b4f 100%); }
+.status-ocupado { background: linear-gradient(160deg,#ff6b6b 0%, #e03535 40%, #8b0000 100%); }
+.status-chamando { background: linear-gradient(160deg,#d79cff 0%,#9a5adf 45%,#5a2b9a 100%); }
+.status-emchamada { background: linear-gradient(160deg,#4da6ff 0%,#1a73e8 45%,#004aad 100%); animation: emPulse 1.6s infinite ease-in-out; }
+.status-emchamada .ramal-indicator { background: radial-gradient(circle,#9fd6ff,#1a73e8); box-shadow: 0 0 12px rgba(26,115,232,0.45); }
+@keyframes emPulse { 0%{ box-shadow:0 6px 18px rgba(26,115,232,0.28)} 50%{box-shadow:0 10px 24px rgba(26,115,232,0.5)} 100%{box-shadow:0 6px 18px rgba(26,115,232,0.28)} }
+
+/* === FILAS === */
+.fila-card {
+    position: relative;
+    width: 144px;
+    min-height: 90px;
+    border-radius: 12px;
+    background: linear-gradient(160deg, #ffb84d 0%, #ff8800 40%, #a65a00 100%);
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.15);
+    transition: all 0.25s ease;
+}
+.fila-card strong { font-size: 0.9rem; margin-bottom: 4px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:144px; }
+.fila-card .ramais-fila { font-size: 0.75rem; color: rgba(255,255,255,0.9); line-height: 1.2; margin-top: 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; }
+.fila-card.emchamada { background: linear-gradient(160deg, #4da6ff 0%, #1a73e8 45%, #004aad 100%); animation: emPulse 1.6s infinite ease-in-out; }
+
+@media (max-width:480px){
+    .ramal-card { width: 42vw; height: 95px; }
+    .fila-card { width: 46vw; height: 90px; }
+}
+</style>
+
+<script>
+async function atualizarRamais() {
+    try {
+        const res = await fetch("/api/ramais");
+        const dados = await res.json();
+
+        const containerRamais = document.querySelector("#grade-ramais");
+        const containerFilas = document.querySelector("#grade-filas");
+        containerRamais.innerHTML = "";
+        containerFilas.innerHTML = "";
+
+        const chamadas = dados.chamadas || [];
+        const filas = dados.filas || [];
+
+        // === FILAS ===
+        filas.forEach(f => {
+            const card = document.createElement("div");
+            let emChamada = chamadas.some(c => c.destino === f.fila || c.origem === f.fila);
+            card.className = "fila-card" + (emChamada ? " emchamada" : "");
+
+            let ramaisHTML = "";
+            if (f.ramais && f.ramais.length) {
+                ramaisHTML = f.ramais.map(r => {
+                    let nomeCurto = r.nome.length > 15 ? r.nome.substring(0,15) : r.nome;
+                    return `${r.ramal} - ${nomeCurto}`;
+                }).join("<br>");
+            } else {
+                ramaisHTML = "<small>Sem ramais</small>";
+            }
+
+            let nomeFila = f.nome.length > 15 ? f.nome.substring(0,15) : f.nome;
+            card.innerHTML = `<strong>${f.fila} - ${nomeFila}</strong>
+                              <div class="ramais-fila">${ramaisHTML}</div>`;
+            containerFilas.appendChild(card);
+        });
+
+        // === RAMAIS ===
+        (dados.ramais || []).sort((a,b) => parseInt(a.ramal) - parseInt(b.ramal))
+        .forEach(r => {
+            const card = document.createElement("div");
+            const chamada = chamadas.find(c => c.origem === r.ramal || c.destino === r.ramal);
+
+            let s = (r.status || "").toLowerCase();
+            let classe = "status-offline";
+            if (chamada) classe = "status-emchamada";
+            else if (s.includes("online")) classe = "status-online";
+            else if (s.includes("ocupado") || s.includes("busy") || s.includes("in use")) classe = "status-ocupado";
+            else if (s.includes("chamando") || s.includes("ring")) classe = "status-chamando";
+
+            card.className = `ramal-card ${classe}`;
+
+            let displayName = (r.nome || "").replace(/"/g, "").trim();
+            if(displayName.length>15) displayName = displayName.substring(0,15);
+            if(!displayName && (!r.status || r.status==="")) displayName = "Offline";
+
+            let bottomHtml = `<div class="ramal-rodape small">${chamada?chamada.duracao:(r.ip||"-")}</div>`;
+            let badgeHtml = "";
+            if(chamada){
+                const other = chamada.origem===r.ramal ? chamada.destino : chamada.origem;
+                badgeHtml = `<div class="ramal-badge">${other}</div>`;
+            }
+
+            card.innerHTML = `
+                <div class="ramal-indicator" aria-hidden="true"></div>
+                <div class="ramal-numero">${r.ramal}</div>
+                <div class="ramal-nome">${displayName}</div>
+                ${bottomHtml}
+                ${badgeHtml}
+            `;
+            containerRamais.appendChild(card);
+        });
+
+    } catch (err) {
+        console.error("Erro ao atualizar ramais:", err);
+    }
+}
+
+setInterval(atualizarRamais, 3000);
+atualizarRamais();
+</script>
+{% endblock %}
+

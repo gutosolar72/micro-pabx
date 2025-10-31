@@ -8,6 +8,7 @@ from blueprints.nanosip import nanosip_bp
 from blueprints.rede import rede_bp
 from blueprints.rotas import rotas_bp
 from blueprints.relatorios import relatorios_bp
+from blueprints.painelweb import painelweb_bp
 
 import licenca
 
@@ -30,7 +31,8 @@ BLUEPRINT_MAP = {
     "nanosip": nanosip_bp,
     "rede": rede_bp,
     "relatorios": relatorios_bp,
-    "rotas": rotas_bp
+    "rotas": rotas_bp,
+    "painelweb": painelweb_bp
 }
 
 for bp_name, bp in BLUEPRINT_MAP.items():

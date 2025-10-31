@@ -1,0 +1,165 @@
+from flask import Blueprint, render_template, jsonify
+import subprocess, re
+
+painelweb_bp = Blueprint("painelweb", __name__)
+
+DEBUG = False  # defina True para ver logs no console
+
+
+# -----------------------------------
+# Coleta os ramais e seus status
+# -----------------------------------
+def coletar_ramais():
+    try:
+        output = subprocess.check_output(
+            ["asterisk", "-rx", "sip show peers"],
+            text=True, stderr=subprocess.STDOUT
+        )
+    except subprocess.CalledProcessError as e:
+        if DEBUG:
+            print("[PainelWeb] Erro sip show peers:", e.output)
+        return []
+
+    chamadas = coletar_chamadas()
+    ramais_em_chamada = set()
+    for c in chamadas:
+        if c["origem"].isdigit():
+            ramais_em_chamada.add(c["origem"])
+        if c["destino"].isdigit():
+            ramais_em_chamada.add(c["destino"])
+
+    ramais = []
+    padrao = re.compile(
+        r'^(?P<name>\S+?)/\S+\s+'
+        r'(?P<ip>(?:\d{1,3}\.){3}\d{1,3}|\(Unspecified\))\s+'
+        r'(?:\S+\s+){2,}?'
+        r'(?P<port>\d+)\s+'
+        r'(?P<status>.*)$', re.IGNORECASE
+    )
+
+    for linha in output.splitlines():
+        linha = linha.strip()
+        if not linha or linha.lower().startswith("name/username") or "peer" in linha.lower():
+            continue
+
+        m = padrao.match(linha)
+        if not m:
+            continue
+
+        ramal = m.group("name").strip()
+        ip = m.group("ip").strip()
+        status_txt = m.group("status").strip().upper()
+
+        # -----------------------------------
+        # Lógica corrigida para offline / online
+        # -----------------------------------
+        latencia = "-"
+        cor = "gray"
+        status = "offline"
+
+        if ip.upper() != "(UNSPECIFIED)" and ip != "":
+            if "OK" in status_txt:
+                status = "online"
+                cor = "green"
+                mlat = re.search(r'\(([^)]+)\)', status_txt)
+                if mlat:
+                    latencia = mlat.group(1)
+            elif any(x in status_txt for x in ["UNREACHABLE", "LAGGED", "UNKNOWN"]):
+                status = "offline"
+                cor = "gray"
+            else:
+                status = "offline"
+                cor = "gray"
+        else:
+            ip = "offline"
+            status = "offline"
+            cor = "gray"
+
+        # Ajuste para ramais em chamada
+        if ramal in ramais_em_chamada:
+            status = "ocupado"
+            cor = "red"
+
+        # Buscar nome (Callerid)
+        try:
+            detalhe = subprocess.check_output(
+                ["asterisk", "-rx", f"sip show peer {ramal}"],
+                text=True, stderr=subprocess.STDOUT
+            )
+            mnome = re.search(r"Callerid\s*:\s*(\S+)", detalhe)
+            nome = mnome.group(1) if mnome else ""
+        except Exception:
+            nome = ""
+
+        ramais.append({
+            "ramal": ramal,
+            "nome": nome,
+            "status": status,
+            "cor": cor,
+            "ip": ip,
+            "latencia": latencia
+        })
+
+    return ramais
+
+
+# -----------------------------------
+# Coleta as chamadas ativas
+# -----------------------------------
+def coletar_chamadas():
+    try:
+        output = subprocess.check_output(
+            ["asterisk", "-rx", "core show channels verbose"],
+            text=True, stderr=subprocess.STDOUT
+        )
+        output = "\n".join(line for line in output.splitlines() if "AppDial" not in line)
+    except subprocess.CalledProcessError as e:
+        if DEBUG:
+            print("[PainelWeb] Erro core show channels:", e.output)
+        return []
+
+    chamadas = []
+    linhas = output.splitlines()
+    for linha in linhas:
+        if not linha.strip() or linha.startswith("Channel") or "active" in linha.lower():
+            continue
+
+        partes = re.split(r'\s{2,}', linha.strip())
+        if len(partes) < 7:
+            continue
+
+        origem = partes[2] if len(partes) > 2 else "-"
+        destino = partes[6] if len(partes) > 6 else "-"
+        duracao = partes[7] if len(partes) > 7 else "-"
+
+        chamadas.append({
+            "origem": origem,
+            "destino": destino,
+            "duracao": duracao
+        })
+
+    if DEBUG:
+        print(f"[PainelWeb] {len(chamadas)} chamadas ativas")
+        for c in chamadas:
+            print(f"origem: {c['origem']} → destino: {c['destino']} duracao: ({c['duracao']})")
+    return chamadas
+
+
+# -----------------------------------
+# Rotas Flask
+# -----------------------------------
+@painelweb_bp.route("/painel")
+def painel():
+    return render_template("painelweb.html")
+
+
+@painelweb_bp.route("/api/ramais")
+def api_ramais():
+    dados = {
+        "ramais": coletar_ramais(),
+        "chamadas": coletar_chamadas()
+    }
+    if DEBUG:
+        print(dados)
+    return jsonify(dados)
+

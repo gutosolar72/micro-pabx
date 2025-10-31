@@ -157,6 +157,9 @@
                 <a href="{{ url_for('rotas.listar_usuarios') }}">Usuários</a>
             {% endif %}
             {% if session.get('role') in ['admin', 'gerente', 'operador'] %}
+                <a href="{{ url_for('painelweb.painel') }}">Painel</a>
+            {% endif %}
+            {% if session.get('role') in ['admin', 'gerente', 'operador'] %}
                 <a href="{{ url_for('relatorios.relatorio_cdr') }}">Relatórios</a>
             {% endif %}
         {% if not session.get('user') %}
