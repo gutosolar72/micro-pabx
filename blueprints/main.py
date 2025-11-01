@@ -58,10 +58,8 @@ def licenca_status():
 
         if not is_vm:
             # Máquina física → gera arquivo automaticamente
-
             lic_key = f"{cpu_serial}_{mac}"
             lic.registrar_chave_licenca(lic_key, is_vm=False)
-
 
     # 2️⃣ POST
     if request.method == "POST":
@@ -92,7 +90,7 @@ def licenca_status():
     # Determina mensagem para hardware físico
     hardware_msg = None
     if not is_vm and license_info["valid"]:
-        hardware_msg = "Hardware físio. Licenç gerada automaticamente."
+        hardware_msg = "Hardware físico. Licença gerada automaticamente."
 
     return render_template(
         "licenca.html",
@@ -115,8 +113,12 @@ def licenca_status():
 @login_required
 def reload():
     try:
-        subprocess.run(["/usr/bin/systemctl", "start", "nanosip-admin@apply_config.service"], check=True)
-        session["msg_apply"] = "Configurações aplicadas com sucesso!"
+        subprocess.run(
+            ["/usr/bin/systemctl", "start", "nanosip-admin@apply_config.service"],
+            check=True
+        )
+        flash("Configurações aplicadas com sucesso!", "success")
     except Exception as e:
-        session["msg_apply"] = f"Erro ao aplicar configurações: {e}"
+        flash(f"Erro ao aplicar configurações: {e}", "danger")
     return redirect(url_for("main.index"))
+
