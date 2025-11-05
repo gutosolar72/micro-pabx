@@ -59,7 +59,7 @@ def licenca_status():
         if not is_vm:
             # Máquina física → gera arquivo automaticamente
             lic_key = f"{cpu_serial}_{mac}"
-            lic.registrar_chave_licenca(lic_key, is_vm=False)
+            lic.atualizar_licenca_remota(lic_key, is_vm=False)
 
     # 2️⃣ POST
     if request.method == "POST":
@@ -72,7 +72,7 @@ def licenca_status():
                 flash("Informe a Chave de Ativação.", "danger")
                 return redirect(url_for("main.licenca_status"))
 
-            ok, msg = lic.registrar_chave_licenca(posted_key=posted, is_vm=True)
+            ok, msg = lic.atualizar_licenca_remota(posted_key=posted, is_vm=True)
             flash(msg, "success" if ok else "danger")
             return redirect(url_for("main.licenca_status"))
         else:
