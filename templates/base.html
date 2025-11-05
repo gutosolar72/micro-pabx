@@ -255,6 +255,23 @@
         }
     });
     </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Seleciona as mensagens (tanto flash quanto msg_apply)
+        const messages = document.querySelectorAll('.license-status, #config-msg');
+    
+        messages.forEach(msg => {
+            // Após 4 segundos, aplica o fade out
+            setTimeout(() => {
+                msg.style.transition = 'opacity 0.5s ease';
+                msg.style.opacity = '0';
+                // Remove do DOM depois da animação
+                setTimeout(() => msg.remove(), 200);
+            }, 1000);
+        });
+    });
+    </script>
+
 
     <footer>
         <p>NanoSIP - Copyright &copy; 2025 - Todos os direitos reservados.</p>
