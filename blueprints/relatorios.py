@@ -42,11 +42,15 @@ def parse_cdr():
                         calldate_br = row[9]
 
                     uniqueid = row[16]
+                    duration = row[12]
+                    billsec = row[13]
+                    disposition = row[14].strip().upper() if len(row) > 14 else "UNKNOWN"
+
+                    # --- Arquivo de gravação ---
                     grava_file = os.path.join(MONITOR_DIR, f"{uniqueid}.wav")
                     recording = grava_file if os.path.isfile(grava_file) else None
 
-                    disposition = row[14].strip().upper() if len(row) > 14 else "UNKNOWN"
-
+                    # --- Mapeamento de status ---
                     status_map = {
                         "ANSWERED": "Atendida",
                         "BUSY": "Ocupado",
@@ -56,6 +60,10 @@ def parse_cdr():
                         "CONGESTION": "Congestionada"
                     }
 
+                    # --- Correção: chamadas com 0s não são realmente atendidas ---
+                    if disposition == "ANSWERED" and billsec == "0":
+                        disposition = "NO ANSWER"
+
                     registro = {
                         "calldate": calldate_br,
                         "src": row[1],
@@ -63,17 +71,20 @@ def parse_cdr():
                         "clid": row[4],
                         "lastapp": row[7],
                         "lastdata": row[8],
-                        "duration": row[12],
-                        "billsec": row[13],
+                        "duration": duration,
+                        "billsec": billsec,
                         "disposition": status_map.get(disposition, disposition.capitalize()),
                         "uniqueid": uniqueid,
                         "recording": recording
                     }
+
                     registros.append(registro)
+
         except Exception as e:
             flash(f"Erro ao processar {arquivo}: {e}", "danger")
 
     return registros
+
 
 @relatorios_bp.route("/relatorios")
 @login_required
@@ -96,7 +107,9 @@ def relatorio_cdr():
     end = start + per_page
     registros_paginados = registros[start:end]
 
-    MODULOS = [m.strip().lower() for m in get_modulos().split(',')] if get_modulos() else []
+    # --- Verifica módulo RECORD ---
+    modulos_raw = get_modulos() or ''
+    MODULOS = [m.strip().lower() for m in modulos_raw.split(',')]
     has_record = 'record' in MODULOS
 
     if has_record:
@@ -104,6 +117,7 @@ def relatorio_cdr():
             uniqueid_safe = r['uniqueid'].split('.')[0]
             filename = f"{r['src']}-{r['dst']}-{uniqueid_safe}.wav"
             full_path = os.path.join(MONITOR_DIR, filename)
+
             if os.path.isfile(full_path) and os.path.getsize(full_path) > 44:
                 r['recording'] = url_for('relatorios.recordings', filename=filename)
             else:
@@ -118,6 +132,7 @@ def relatorio_cdr():
         LICENSE_VALID=license_context(),
         LICENSE_MSG=license_message()
     )
+
 
 @relatorios_bp.route('/recordings/<path:filename>')
 @login_required
