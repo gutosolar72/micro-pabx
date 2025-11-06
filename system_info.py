@@ -40,9 +40,7 @@ def get_system_info():
     except (subprocess.CalledProcessError, FileNotFoundError):
         info["ramais_cadastrados"] = "Não foi possível obter a lista de ramais"
 
-
-    MODULOS = get_modulos()
-    info["modulos"] = MODULOS.lower()
+    info["modulos"] = get_modulos()
         
     return info
 
