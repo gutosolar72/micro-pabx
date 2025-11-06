@@ -4,7 +4,7 @@ import subprocess, re, sqlite3, os
 painelweb_bp = Blueprint("painelweb", __name__)
 
 DB_PATH = "/opt/nanosip/nanosip.db"
-DEBUG = True
+DEBUG = False
 
 
 def coletar_chamadas():
@@ -34,18 +34,20 @@ def coletar_chamadas():
 
 
 def coletar_ramais():
-    nomes_ramais = {}
+    # 1️⃣ Busca nomes e números de ramais no banco
+    ramais_db = {}
     if os.path.exists(DB_PATH):
         try:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             for r in cursor.execute("SELECT ramal, nome FROM ramais"):
-                nomes_ramais[str(r[0])] = r[1]
+                ramais_db[str(r[0])] = r[1]
             conn.close()
         except Exception as e:
             if DEBUG:
                 flash(f"[PainelWeb] Erro ao ler DB: {e}", "danger")
 
+    # 2️⃣ Busca chamadas ativas (para saber quais ramais estão ocupados)
     chamadas = coletar_chamadas()
     ramais_em_chamada = set()
     for c in chamadas:
@@ -54,6 +56,7 @@ def coletar_ramais():
         if c["destino"].isdigit():
             ramais_em_chamada.add(c["destino"])
 
+    # 3️⃣ Busca status atual de todos os peers do Asterisk
     try:
         output = subprocess.check_output(
             ["asterisk", "-rx", "sip show peers"],
@@ -62,7 +65,7 @@ def coletar_ramais():
     except subprocess.CalledProcessError as e:
         if DEBUG:
             flash(f"[PainelWeb] Erro ao executar 'sip show peers': {e.output}", "danger")
-        return []
+        output = ""
 
     padrao = re.compile(
         r'^(?P<name>\S+?)/\S+\s+'
@@ -72,7 +75,7 @@ def coletar_ramais():
         r'(?P<status>.*)$', re.IGNORECASE
     )
 
-    ramais = []
+    status_asterisk = {}
     for linha in output.splitlines():
         linha = linha.strip()
         if not linha or linha.lower().startswith("name/username") or "peer" in linha.lower():
@@ -84,10 +87,9 @@ def coletar_ramais():
         ramal = m.group("name").strip()
         ip = m.group("ip").strip()
         status_txt = m.group("status").strip().upper()
-
         latencia = "-"
-        cor = "gray"
         status = "offline"
+        cor = "gray"
 
         if ip.upper() != "(UNSPECIFIED)" and ip != "":
             if "OK" in status_txt:
@@ -99,29 +101,44 @@ def coletar_ramais():
             elif any(x in status_txt for x in ["UNREACHABLE", "LAGGED", "UNKNOWN"]):
                 status = "offline"
                 cor = "gray"
-            else:
-                status = "offline"
-                cor = "gray"
         else:
             ip = "offline"
             status = "offline"
             cor = "gray"
 
+        status_asterisk[ramal] = {
+            "ip": ip,
+            "status": status,
+            "cor": cor,
+            "latencia": latencia
+        }
+
+    # 4️⃣ Combina dados do banco + status do Asterisk
+    ramais = []
+    for ramal, nome in ramais_db.items():
+        dados_ast = status_asterisk.get(ramal, {
+            "ip": "offline",
+            "status": "offline",
+            "cor": "gray",
+            "latencia": "-"
+        })
+
+        status = dados_ast["status"]
+        cor = dados_ast["cor"]
         if ramal in ramais_em_chamada:
             status = "ocupado"
             cor = "red"
-
-        nome = nomes_ramais.get(ramal, f"Ramal {ramal}")
 
         ramais.append({
             "ramal": ramal,
             "nome": nome,
             "status": status,
             "cor": cor,
-            "ip": ip,
-            "latencia": latencia
+            "ip": dados_ast["ip"],
+            "latencia": dados_ast["latencia"]
         })
 
+    # 5️⃣ Retorna a lista final de ramais
     return ramais
 
 

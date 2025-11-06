@@ -1,6 +1,8 @@
 # system_info.py
 import subprocess
 from blueprints.rede import carrega_config_atual
+from licenca import get_modulos
+
 
 def get_system_info():
     info = {}
@@ -37,6 +39,10 @@ def get_system_info():
 
     except (subprocess.CalledProcessError, FileNotFoundError):
         info["ramais_cadastrados"] = "Não foi possível obter a lista de ramais"
+
+
+    MODULOS = get_modulos()
+    info["modulos"] = MODULOS.lower()
         
     return info
 

@@ -41,7 +41,8 @@
                     <div class="alert alert-info mt-3">
                         <strong>Número da licença:</strong> {{ status.hardware_id or 'N/A' }} <br>
                         <strong>Status da licença:</strong> {{ status.status or 'Desconhecido' }} <br>
-                        <strong>Validade:</strong> {{ status.validade or 'N/A' }}
+                        <strong>Validade:</strong> {{ status.validade or 'N/A' }} <br>
+                        <strong>Modulos Contratados:</strong> {{ status.modulos or 'N/A' }} <br>
                     </div>
                     {% else %}
                     <div class="alert alert-warning mt-3">

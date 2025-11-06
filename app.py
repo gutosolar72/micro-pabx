@@ -1,7 +1,9 @@
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, request, session
 from database import init_db
 import os
+import licenca
 
+# ----- Importa Blueprints -----
 from blueprints.main import main_bp
 from blueprints.auth import auth_bp
 from blueprints.nanosip import nanosip_bp
@@ -10,53 +12,57 @@ from blueprints.rotas import rotas_bp
 from blueprints.relatorios import relatorios_bp
 from blueprints.painelweb import painelweb_bp
 
-import licenca
 
-# ----- App Flask
+# ========================================================
+# 🧱 Inicialização do App Flask
+# ========================================================
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "chave_super_secreta_para_desenvolvimento")
 
-# ----- Licença
 
-LICENSE_CONFIG = licenca.get_protected_config_data()
-LICENSE_VALID = LICENSE_CONFIG["status"] == "ok"
-LICENSE_MESSAGE = LICENSE_CONFIG["message"]
-
-# ----- Registro de blueprints permitidos
+# ========================================================
+# ⚙️ Registro dos Blueprints
+# ========================================================
 
 BLUEPRINT_MAP = {
     "main": main_bp,
     "auth": auth_bp,
     "nanosip": nanosip_bp,
     "rede": rede_bp,
-    "relatorios": relatorios_bp,
     "rotas": rotas_bp,
+    "relatorios": relatorios_bp,
     "painelweb": painelweb_bp
 }
 
 for bp_name, bp in BLUEPRINT_MAP.items():
     if bp_name in ["nanosip", "rede", "rotas"]:
-        app.register_blueprint(bp, url_prefix='/config')
+        app.register_blueprint(bp, url_prefix="/config")
     else:
         app.register_blueprint(bp)
 
 
-# ----- Context processor para base.html
+# ========================================================
+# 🔐 Contexto Global (para uso no template base.html)
+# ========================================================
+# Aqui não há flash. Apenas disponibilizamos os dados
+# atuais de licença (validação e mensagem).
 
 @app.context_processor
 def inject_license_status():
-    return dict(LICENSE_VALID=LICENSE_VALID, LICENSE_MSG=LICENSE_MESSAGE)
+    lic_info = licenca.validate_license()
+    return dict(
+        LICENSE_VALID=lic_info["valid"],
+        LICENSE_MSG=lic_info["message"]
+    )
 
-# ---- Before request (checa licença)
 
-@app.before_request
-def check_license_status():
-    if not LICENSE_VALID:
-        flash(LICENSE_MESSAGE, "danger")
+# ========================================================
+# 🗄️ Inicialização do Banco de Dados
+# ========================================================
 
 def initialize_database():
-    db_path = "/opt/nanosip/nanosip.db"  # ajuste conforme seu caminho real
+    db_path = "/opt/nanosip/nanosip.db"
     if not os.path.exists(db_path):
         print("📀 Banco de dados não encontrado. Criando...")
         with app.app_context():
@@ -65,8 +71,12 @@ def initialize_database():
     else:
         print("📂 Banco já existe. Pulando criação.")
 
-# ---- Inicialização do app
+
+# ========================================================
+# 🚀 Execução Principal
+# ========================================================
 
 if __name__ == "__main__":
     initialize_database()
     app.run(host="0.0.0.0", port=80, debug=True)
+
