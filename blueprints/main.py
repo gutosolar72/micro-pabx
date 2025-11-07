@@ -155,7 +155,7 @@ def reload():
         )
         flash("Configurações aplicadas com sucesso!", "success")
     except Exception as e:
-        flash(f"Erro ao aplicar configurações: {e}", "danger")
+        flash(f"Erro ao aplicar configurações", "danger")
 
     return redirect(url_for("main.index"))
 
